@@ -9,7 +9,7 @@ import { useSyncExternalStore } from 'react'
 import { PRICE_RECORDS } from '../data/prices'
 import { FLOW_RECORDS, PRECURSOR_PRICE_RECORDS } from '../data/flows'
 import { MM_REGIONS, MM_BORDER_NODES, MM_REGION_RECORDS, MM_FLOW_RECORDS } from '../data/myanmar'
-import * as ingest from './ingest.js'
+import * as ingest from './ingest'
 import type { DataState, LoadBundle, LoadReport, MmNode } from '../types'
 
 /** Dataset keys (everything in DataState except the isSample flag). */
