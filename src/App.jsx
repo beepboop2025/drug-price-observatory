@@ -22,10 +22,20 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🌍 Global Drug Price Observatory</h1>
-        <p className="tagline">
-          Awareness through public data — retail prices &amp; precursor supply chains,
-          at country &amp; annual grain. Educational use only.
+        <div className="brand">
+          <span className="brand-mark">🌍</span>
+          <div>
+            <h1>Global Drug Price Observatory</h1>
+            <p className="tagline">Making the world&rsquo;s drug-trade data legible.</p>
+          </div>
+          <span className={`data-badge ${isSample ? 'sample' : 'live'}`}>
+            {isSample ? 'Sample data' : 'Live data'}
+          </span>
+        </div>
+        <p className="lede">
+          Street prices, precursor-chemical flows, and trafficking corridors — drawn
+          from public UNODC&nbsp;/&nbsp;INCB data and translated into plain language.
+          Aggregate statistics for awareness, education, and research only.
         </p>
         <nav className="tabs">
           {TABS.map((t) => (
