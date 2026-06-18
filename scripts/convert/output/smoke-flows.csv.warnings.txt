@@ -1,2 +1,0 @@
-Row 5: skipped due to unknown or missing precursor "bad_precursor"
-Row 6: skipped due to missing required fields (origin)

@@ -1,2 +1,0 @@
-Row 6: skipped due to missing required fields (drug)
-Row 7: skipped due to unknown or missing drug "unknowndrug"

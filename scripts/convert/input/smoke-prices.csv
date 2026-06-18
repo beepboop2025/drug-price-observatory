@@ -1,7 +1,0 @@
-drug,country,iso3,region,year,price per gram,purity
-Cocaine,United States,USA,Americas,2022,120,65
-Heroin,Germany,DEU,Europe,2021,50,
-Cannabis,Colombia,COL,Americas,2023,5,
-Methamphetamine,Thailand,THA,Asia,2022,80,
-,Missingland,ZZZ,Asia,2022,100,
-UnknownDrug,Nowhere,ZZZ,Asia,2022,100,

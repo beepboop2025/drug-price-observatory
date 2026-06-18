@@ -1,9 +1,0 @@
---- Page 1 ---
-UNODC Myanmar Opium Survey 2023
-Regional cultivation estimates
-Shan (North): 12,345 ha
-Kachin 8,900 hectares
-Shan (South) 5,678 ha
-Some random text without a region.
-Wa no value here
-Shan 1,234 ha
