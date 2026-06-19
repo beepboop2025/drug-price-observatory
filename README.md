@@ -22,6 +22,22 @@ top of that public data: clean charts, maps, and plain-English explanations.
 Every view carries an auto-generated *"In plain English"* sentence and hover
 tooltips that explain each figure in human terms.
 
+## Screenshots
+
+> Showing sample/illustrative data (the in-app badge flips to "Live data" once real official figures are loaded).
+
+**Street Prices** — price trends + affordability lens, with a plain-English summary:
+
+![Street Prices](docs/screenshots/street-prices.png)
+
+**Flow Map** — Equal-Earth world map of precursor corridors, animated by year:
+
+![Flow Map](docs/screenshots/flow-map.png)
+
+**Myanmar Focus** — province-level Golden Triangle detail:
+
+![Myanmar Focus](docs/screenshots/myanmar-focus.png)
+
 ## Ethical scope (please read)
 
 This tool reports **aggregate, published statistics** — country-level, annual, and
