@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <rect width="32" height="32" rx="7" fill="#0a0f1a"/>
+  <g fill="none" stroke="#6ea8fe" stroke-width="1.6">
+    <circle cx="16" cy="16" r="9"/>
+    <ellipse cx="16" cy="16" rx="3.6" ry="9"/>
+    <line x1="7" y1="16" x2="25" y2="16"/>
+    <line x1="8.4" y1="11" x2="23.6" y2="11"/>
+    <line x1="8.4" y1="21" x2="23.6" y2="21"/>
+  </g>
+  <!-- source-hub dot, echoing the orange "source" motif in the maps -->
+  <circle cx="21.5" cy="11" r="2.1" fill="#ff7a59"/>
+</svg>
