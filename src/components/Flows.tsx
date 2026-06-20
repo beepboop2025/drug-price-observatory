@@ -3,6 +3,7 @@ import { PRECURSORS } from '../data/flows'
 import { useData } from '../lib/dataStore'
 import { explainFlows } from '../lib/explain'
 import Explainer from './Explainer'
+import CountUp from '../motion/CountUp'
 
 const fmtKg = (v: number): string => `${Number(v).toLocaleString()} kg`
 const fmtUsd = (v: number): string => `$${Number(v).toLocaleString()}`
@@ -20,6 +21,13 @@ export default function Flows() {
     [precursorPriceRecords, precursor],
   )
 
+  // Headline figures for the stat band — recomputed (and re-animated) on filter.
+  const totalSeized = useMemo(() => flows.reduce((s, r) => s + r.quantityKg, 0), [flows])
+  const maxPrice = useMemo(
+    () => prices.reduce((m, r) => Math.max(m, r.priceUsdPerKg), 0),
+    [prices],
+  )
+
   const labelFor = (id: string): string => PRECURSORS.find((p) => p.id === id)?.label ?? id
 
   return (
@@ -32,6 +40,21 @@ export default function Flows() {
             {PRECURSORS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
           </select>
         </label>
+      </div>
+
+      <div className="stat-band">
+        <div className="stat">
+          <span className="stat-value"><CountUp value={totalSeized} suffix=" kg" /></span>
+          <span className="stat-label">Total seized across corridors</span>
+        </div>
+        <div className="stat">
+          <span className="stat-value"><CountUp value={flows.length} group={false} /></span>
+          <span className="stat-label">Tracked corridor records</span>
+        </div>
+        <div className="stat">
+          <span className="stat-value"><CountUp value={maxPrice} prefix="$" suffix=" /kg" /></span>
+          <span className="stat-label">Highest precursor price</span>
+        </div>
       </div>
 
       <Explainer text={explainFlows(flows, precursor === 'all' ? 'all tracked precursors' : labelFor(precursor))} />

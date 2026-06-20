@@ -26,6 +26,14 @@ tooltips that explain each figure in human terms.
 
 > Showing sample/illustrative data (the in-app badge flips to "Live data" once real official figures are loaded).
 
+A dark, motion-led interface: a WebGL globe traces precursor corridors out of their
+source hubs (coral) toward transit and destination nodes (cyan), headings reveal
+letter-by-letter, and sections spring in as you scroll. The immersive layer is fully
+gated behind `prefers-reduced-motion` and falls back to a lightweight 2D canvas on
+mobile / WebGL-less devices.
+
+![Global Drug Price Observatory — WebGL hero globe](docs/screenshots/hero.png)
+
 **Street Prices** — price trends + affordability lens, with a plain-English summary:
 
 ![Street Prices](docs/screenshots/street-prices.png)
@@ -64,8 +72,12 @@ See `src/lib/ingest-config-reference.md` for the column mapping.
 
 ## Tech
 
-React 18 · Vite 5 · Recharts · react-simple-maps (world-atlas bundled locally).
-Runtime data store (`src/lib/dataStore.js`) swaps sample → real data on load.
+React 18 · Vite 5 · TypeScript · Recharts · react-simple-maps (world-atlas bundled
+locally). The interface layer adds **Three.js / React Three Fiber** (a lazy-loaded
+hero globe with bloom post-processing — kept out of the initial bundle),
+**@react-spring/web** (physics-based letter/section reveals and animated counters),
+and **Lenis** (global smooth scroll) — all behind a `prefers-reduced-motion` guard.
+Runtime data store (`src/lib/dataStore.ts`) swaps sample → real data on load.
 
 ## Develop
 
