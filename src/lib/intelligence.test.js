@@ -366,4 +366,123 @@ describe('buildMyanmarIntelligenceBriefing', () => {
       assert.ok(briefing.profiles.every((p) => p.neighborRiskScore === 0 && p.neighborRegion === null && !p.spilloverWatch))
     })
   })
+
+  describe('evidence staleness', () => {
+    it('treats current-year evidence as current with no confidence penalty', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        regionRecords: [],
+        conflictEvents: [
+          {
+            region: 'shan_north', year: 2024, actor: 'Border militia', actorType: 'militia',
+            eventType: 'clash', intensity: 80, sourceName: 'ACLED', sourceUrl: 'https://example.org/acled',
+          },
+        ],
+        precursorFlows: [],
+        outflows: [],
+      })
+      const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+      assert.equal(shan.mostRecentEvidenceYear, 2024)
+      assert.equal(shan.evidenceAgeYears, 0)
+      assert.equal(shan.evidenceStaleness, 'current')
+    })
+
+    it('flags aging evidence 1-2 years old and applies a smaller confidence penalty', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        regionRecords: [],
+        conflictEvents: [
+          {
+            region: 'shan_north', year: 2023, actor: 'Border militia', actorType: 'militia',
+            eventType: 'clash', intensity: 80, sourceName: 'ACLED', sourceUrl: 'https://example.org/acled',
+          },
+        ],
+        precursorFlows: [],
+        outflows: [],
+      })
+      const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+      assert.equal(shan.mostRecentEvidenceYear, 2023)
+      assert.equal(shan.evidenceAgeYears, 1)
+      assert.equal(shan.evidenceStaleness, 'aging')
+    })
+
+    it('flags stale evidence 3+ years old, penalizes confidence more, and counts it in enterprise readiness', () => {
+      const fresh = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        regionRecords: [],
+        conflictEvents: [
+          {
+            region: 'shan_north', year: 2024, actor: 'Border militia', actorType: 'militia',
+            eventType: 'clash', intensity: 80, sourceName: 'ACLED', sourceUrl: 'https://example.org/acled',
+          },
+        ],
+        precursorFlows: [],
+        outflows: [],
+      })
+      const stale = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        regionRecords: [],
+        conflictEvents: [
+          {
+            region: 'shan_north', year: 2020, actor: 'Border militia', actorType: 'militia',
+            eventType: 'clash', intensity: 80, sourceName: 'ACLED', sourceUrl: 'https://example.org/acled',
+          },
+        ],
+        precursorFlows: [],
+        outflows: [],
+      })
+
+      const freshShan = fresh.profiles.find((p) => p.region === 'shan_north')
+      const staleShan = stale.profiles.find((p) => p.region === 'shan_north')
+      assert.equal(staleShan.mostRecentEvidenceYear, 2020)
+      assert.equal(staleShan.evidenceAgeYears, 4)
+      assert.equal(staleShan.evidenceStaleness, 'stale')
+      assert.ok(staleShan.confidenceScore < freshShan.confidenceScore)
+      assert.equal(stale.enterpriseReadiness.staleRegions, 1)
+      assert.equal(fresh.enterpriseReadiness.staleRegions, 0)
+    })
+
+    it('reports no-data staleness when a region has no evidence at all', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        regionRecords: [],
+        conflictEvents: [],
+        precursorFlows: [],
+        outflows: [],
+      })
+      const kachin = briefing.profiles.find((p) => p.region === 'kachin')
+      assert.equal(kachin.mostRecentEvidenceYear, null)
+      assert.equal(kachin.evidenceAgeYears, null)
+      assert.equal(kachin.evidenceStaleness, 'no-data')
+    })
+
+    it('ignores evidence from years after the requested reporting year', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2022,
+        regions,
+        regionRecords: [],
+        conflictEvents: [
+          {
+            region: 'shan_north', year: 2020, actor: 'Border militia', actorType: 'militia',
+            eventType: 'clash', intensity: 80, sourceName: 'ACLED', sourceUrl: 'https://example.org/acled',
+          },
+          {
+            region: 'shan_north', year: 2024, actor: 'Border militia', actorType: 'militia',
+            eventType: 'clash', intensity: 80, sourceName: 'ACLED', sourceUrl: 'https://example.org/acled',
+          },
+        ],
+        precursorFlows: [],
+        outflows: [],
+      })
+      const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+      assert.equal(shan.mostRecentEvidenceYear, 2020)
+      assert.equal(shan.evidenceAgeYears, 2)
+      assert.equal(shan.evidenceStaleness, 'aging')
+    })
+  })
 })

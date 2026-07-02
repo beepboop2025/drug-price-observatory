@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { MM_REGION_ADJACENCY } from '../data/myanmar'
 import { useData } from '../lib/dataStore'
+import { downloadCsv, evidenceLedgerToCsv, riskProfilesToCsv } from '../lib/exportBriefing'
 import { buildMyanmarIntelligenceBriefing } from '../lib/intelligence'
 
 const riskClass = (score: number): string => {
@@ -30,6 +31,23 @@ const trajectoryLabel = (
   if (trajectory === 'insufficient-data') return 'No prior-year data'
   const pct = changePct !== null ? `${changePct >= 0 ? '+' : ''}${Math.round(changePct * 100)}%` : '—'
   return `${pct} vs ${baselineYear}`
+}
+
+const stalenessIcon: Record<string, string> = {
+  current: '●',
+  aging: '◐',
+  stale: '○',
+  'no-data': '·',
+}
+
+const stalenessLabel = (
+  staleness: string,
+  mostRecentEvidenceYear: number | null,
+  evidenceAgeYears: number | null,
+): string => {
+  if (staleness === 'no-data') return 'No dated evidence on file'
+  if (evidenceAgeYears === 0) return `Current — most recent evidence is ${mostRecentEvidenceYear}`
+  return `Most recent evidence is ${mostRecentEvidenceYear} (${evidenceAgeYears} yr${evidenceAgeYears === 1 ? '' : 's'} old)`
 }
 
 export default function IntelligenceBriefing() {
@@ -104,6 +122,27 @@ export default function IntelligenceBriefing() {
           <span className="stat-value">{briefing.enterpriseReadiness.spilloverWatchRegions}</span>
           <span className="stat-label">Regions on spillover watch</span>
         </div>
+        <div className="stat">
+          <span className="stat-value">{briefing.enterpriseReadiness.staleRegions}</span>
+          <span className="stat-label">Regions with stale evidence (3+ yrs)</span>
+        </div>
+      </div>
+
+      <div className="export-actions">
+        <button
+          type="button"
+          className="export-btn"
+          onClick={() => downloadCsv(`myanmar-risk-profiles-${briefing.year}.csv`, riskProfilesToCsv(briefing))}
+        >
+          ⬇ Export risk profiles (CSV)
+        </button>
+        <button
+          type="button"
+          className="export-btn"
+          onClick={() => downloadCsv(`myanmar-evidence-ledger-${briefing.year}.csv`, evidenceLedgerToCsv(briefing))}
+        >
+          ⬇ Export evidence ledger (CSV)
+        </button>
       </div>
 
       <div className="intel-grid">
@@ -148,6 +187,12 @@ export default function IntelligenceBriefing() {
                 ⇄ Spillover watch: borders a high-risk region
               </p>
             )}
+            <p
+              className={`staleness-tag staleness-${profile.evidenceStaleness}`}
+              title={stalenessLabel(profile.evidenceStaleness, profile.mostRecentEvidenceYear, profile.evidenceAgeYears)}
+            >
+              {stalenessIcon[profile.evidenceStaleness]} {profile.evidenceStaleness === 'no-data' ? 'No dated evidence' : `Evidence: ${profile.evidenceStaleness}`}
+            </p>
             <div className="driver-list">
               {profile.drivers.map((driver) => <span key={driver}>{driver}</span>)}
             </div>

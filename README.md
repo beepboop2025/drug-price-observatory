@@ -27,8 +27,12 @@ top of that public data: clean charts, maps, and plain-English explanations.
   evidence into per-region risk/confidence scores, flags cross-source
   disagreement, weights sources by reliability tier, computes a
   year-over-year risk trajectory (rising/falling/stable) so analysts see
-  momentum, and flags a geographic **spillover watch** when a calm region
-  borders one that has already crossed the high-risk threshold.
+  momentum, flags a geographic **spillover watch** when a calm region
+  borders one that has already crossed the high-risk threshold, and flags
+  **evidence staleness** (current/aging/stale) when a region's freshest
+  record predates the reporting year, discounting confidence accordingly.
+  Risk profiles and the evidence-graph ledger can be exported as CSV directly
+  from the briefing for offline analyst review.
 
 Every view carries an auto-generated *"In plain English"* sentence and hover
 tooltips that explain each figure in human terms.

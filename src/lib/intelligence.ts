@@ -48,6 +48,59 @@ export type RiskTrajectory = 'rising' | 'falling' | 'stable' | 'insufficient-dat
 
 const TRAJECTORY_RELATIVE_THRESHOLD = 0.15
 
+/**
+ * Evidence-recency signal: how old the most recent record for a region is,
+ * relative to the requested reporting year. Follows temporal-credibility
+ * practice from OSINT/threat-intel fusion research — corroboration from two
+ * years-stale reports shouldn't carry the same weight as current-year
+ * reporting, since it decays in relevance the longer it goes uncorroborated
+ * by anything newer (arXiv:2506.05780 staleness-aware fusion; temporal
+ * credibility decay modelling for OSINT entity correlation). Reporting
+ * cadence here is annual (public surveys/seizure reports), not daily, so
+ * decay is modelled in report-years rather than a continuous half-life.
+ */
+export type EvidenceStaleness = 'current' | 'aging' | 'stale' | 'no-data'
+
+/** Age (in years) at/above which evidence is treated as stale rather than merely aging. */
+const STALE_EVIDENCE_AGE_YEARS = 3
+/** Age (in years) at/above which current-year evidence starts to be treated as aging. */
+const AGING_EVIDENCE_AGE_YEARS = 1
+const STALE_EVIDENCE_CONFIDENCE_PENALTY = 12
+const AGING_EVIDENCE_CONFIDENCE_PENALTY = 4
+
+function evidenceStalenessTier(ageYears: number | null): EvidenceStaleness {
+  if (ageYears === null) return 'no-data'
+  if (ageYears >= STALE_EVIDENCE_AGE_YEARS) return 'stale'
+  if (ageYears >= AGING_EVIDENCE_AGE_YEARS) return 'aging'
+  return 'current'
+}
+
+/**
+ * Finds the most recent year (at or before the requested reporting year)
+ * with any evidence record for a region, across all evidence types. Looks at
+ * full (unfiltered) history, since a region's freshest evidence may predate
+ * the requested year by design (e.g. reviewing 2022 data for a 2024 report).
+ */
+function mostRecentEvidenceYear(
+  region: string,
+  year: number,
+  allRegionRecords: MmRegionRecord[],
+  allConflictEvents: MmConflictEventRecord[],
+  allPrecursorFlows: MmPrecursorFlowRecord[],
+  allOutflows: MmFlowRecord[],
+): number | null {
+  let latest: number | null = null
+  const consider = (recordYear: number) => {
+    if (recordYear > year) return
+    if (latest === null || recordYear > latest) latest = recordYear
+  }
+  allRegionRecords.filter((r) => r.region === region).forEach((r) => consider(r.year))
+  allConflictEvents.filter((r) => r.region === region).forEach((r) => consider(r.year))
+  allPrecursorFlows.filter((r) => r.to === region).forEach((r) => consider(r.year))
+  allOutflows.filter((r) => r.from === region).forEach((r) => consider(r.year))
+  return latest
+}
+
 export interface RegionRiskProfile {
   region: string
   label: string
@@ -85,6 +138,12 @@ export interface RegionRiskProfile {
    * distinct from the region's own evidence-driven riskScore.
    */
   spilloverWatch: boolean
+  /** Most recent year (<= reporting year) with any evidence record for this region; null if none. */
+  mostRecentEvidenceYear: number | null
+  /** Years between `mostRecentEvidenceYear` and the reporting year; null when there's no evidence at all. */
+  evidenceAgeYears: number | null
+  /** Recency tier for the region's freshest evidence, driving a confidence penalty when stale. */
+  evidenceStaleness: EvidenceStaleness
 }
 
 export interface IntelligenceBriefing {
@@ -100,6 +159,7 @@ export interface IntelligenceBriefing {
     conflictedRegions: number
     risingRegions: number
     spilloverWatchRegions: number
+    staleRegions: number
   }
 }
 
@@ -318,11 +378,29 @@ export function buildMyanmarIntelligenceBriefing(input: {
       input.outflows,
     )
 
+    const evidenceYear = mostRecentEvidenceYear(
+      region.id,
+      year,
+      input.regionRecords,
+      input.conflictEvents,
+      input.precursorFlows,
+      input.outflows,
+    )
+    const evidenceAgeYears = evidenceYear === null ? null : year - evidenceYear
+    const evidenceStaleness = evidenceStalenessTier(evidenceAgeYears)
+    const stalenessPenalty =
+      evidenceStaleness === 'stale'
+        ? STALE_EVIDENCE_CONFIDENCE_PENALTY
+        : evidenceStaleness === 'aging'
+          ? AGING_EVIDENCE_CONFIDENCE_PENALTY
+          : 0
+
     const confidenceScore = clamp(
       Math.min(100, evidenceCount * 16) * 0.45 +
       Math.min(100, regionSources.size * 34) * 0.35 * (0.5 + 0.5 * avgSourceReliability) +
       (stat ? 20 : 0) -
-      (hasSourceConflict ? SOURCE_CONFLICT_PENALTY : 0),
+      (hasSourceConflict ? SOURCE_CONFLICT_PENALTY : 0) -
+      stalenessPenalty,
     )
 
     const verificationTier: VerificationTier =
@@ -360,6 +438,9 @@ export function buildMyanmarIntelligenceBriefing(input: {
       trajectory,
       trajectoryChangePct,
       trajectoryBaselineYear,
+      mostRecentEvidenceYear: evidenceYear,
+      evidenceAgeYears,
+      evidenceStaleness,
       // Filled in below, once every region's own riskScore is known.
       neighborRiskScore: 0,
       neighborRegion: null as string | null,
@@ -401,6 +482,7 @@ export function buildMyanmarIntelligenceBriefing(input: {
   const regionsWithProvenance = profiles.filter((p) => p.evidenceCount > 1 && p.sourceDiversity > 0).length
   const conflictedRegions = profiles.filter((p) => p.hasSourceConflict).length
   const spilloverWatchRegions = profiles.filter((p) => p.spilloverWatch).length
+  const staleRegions = profiles.filter((p) => p.evidenceStaleness === 'stale').length
 
   return {
     year,
@@ -415,6 +497,7 @@ export function buildMyanmarIntelligenceBriefing(input: {
       conflictedRegions,
       risingRegions: profiles.filter((p) => p.trajectory === 'rising').length,
       spilloverWatchRegions,
+      staleRegions,
     },
   }
 }
