@@ -63,13 +63,14 @@ const corridorLabel = (
   dominantCorridor: string | null,
   dominantSharePct: number | null,
 ): string => {
-  if (tier === 'insufficient-data') return 'No precursor-corridor data on file'
+  if (tier === 'insufficient-data') return 'No corridor data on file'
   return `HHI ${hhi} — ${dominantSharePct}% via ${dominantCorridor}`
 }
 
 export default function IntelligenceBriefing() {
   const {
     mmRegions,
+    mmBorderNodes,
     mmRegionRecords,
     mmConflictEvents,
     mmPrecursorFlows,
@@ -95,8 +96,9 @@ export default function IntelligenceBriefing() {
       precursorFlows: mmPrecursorFlows,
       outflows: mmFlowRecords,
       regionAdjacency: MM_REGION_ADJACENCY,
+      borderNodes: mmBorderNodes,
     }),
-    [latestYear, mmRegions, mmRegionRecords, mmConflictEvents, mmPrecursorFlows, mmFlowRecords],
+    [latestYear, mmRegions, mmBorderNodes, mmRegionRecords, mmConflictEvents, mmPrecursorFlows, mmFlowRecords],
   )
 
   const top = briefing.profiles[0]
@@ -146,6 +148,10 @@ export default function IntelligenceBriefing() {
         <div className="stat">
           <span className="stat-value">{briefing.enterpriseReadiness.concentratedCorridorRegions}</span>
           <span className="stat-label">Regions with concentrated precursor corridor</span>
+        </div>
+        <div className="stat">
+          <span className="stat-value">{briefing.enterpriseReadiness.concentratedOutflowCorridorRegions}</span>
+          <span className="stat-label">Regions with concentrated outbound corridor</span>
         </div>
       </div>
 
@@ -225,6 +231,19 @@ export default function IntelligenceBriefing() {
                 )}
               >
                 {corridorIcon[profile.precursorCorridorTier]} Precursor corridor: {profile.precursorCorridorTier}
+              </p>
+            )}
+            {profile.outflowCorridorTier !== 'insufficient-data' && (
+              <p
+                className={`corridor-tag corridor-${profile.outflowCorridorTier}`}
+                title={corridorLabel(
+                  profile.outflowCorridorTier,
+                  profile.outflowCorridorHHI,
+                  profile.dominantOutflowCorridor,
+                  profile.dominantOutflowCorridorSharePct,
+                )}
+              >
+                {corridorIcon[profile.outflowCorridorTier]} Outbound corridor: {profile.outflowCorridorTier}
               </p>
             )}
             <div className="driver-list">

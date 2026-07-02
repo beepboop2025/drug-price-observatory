@@ -77,14 +77,46 @@ export const MM_REGION_RECORDS: MmRegionRecord[] = [
 ]
 
 // Cross-border corridors: source region → border town → out of country.
+// sourceName/sourceUrl attribute each seizure figure to the reporting body —
+// same provenance standard as the conflict-pressure and precursor-inflow
+// layers — so outbound-corridor concentration and cross-source disagreement
+// checks can run on this evidence too.
 export const MM_FLOW_RECORDS: MmFlowRecord[] = [
-  { from: 'shan_north', to: 'muse',      year: 2020, quantityKg: 2400, drug: 'Methamphetamine' },
-  { from: 'shan_north', to: 'muse',      year: 2022, quantityKg: 4100, drug: 'Methamphetamine' },
-  { from: 'wa',         to: 'mekong',    year: 2022, quantityKg: 6800, drug: 'Methamphetamine' },
-  { from: 'shan_east',  to: 'tachileik', year: 2020, quantityKg: 3000, drug: 'Methamphetamine' },
-  { from: 'shan_east',  to: 'tachileik', year: 2022, quantityKg: 5200, drug: 'Methamphetamine' },
-  { from: 'shan_south', to: 'tachileik', year: 2022, quantityKg: 1800, drug: 'Methamphetamine' },
-  { from: 'kachin',     to: 'kachin_in', year: 2022, quantityKg: 700,  drug: 'Heroin' },
+  {
+    from: 'shan_north', to: 'muse', year: 2020, quantityKg: 2400, drug: 'Methamphetamine',
+    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+  },
+  {
+    from: 'shan_north', to: 'muse', year: 2022, quantityKg: 4100, drug: 'Methamphetamine',
+    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+  },
+  {
+    from: 'wa', to: 'mekong', year: 2022, quantityKg: 6800, drug: 'Methamphetamine',
+    sourceName: 'UNODC Mekong seizure reporting',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+  },
+  {
+    from: 'shan_east', to: 'tachileik', year: 2020, quantityKg: 3000, drug: 'Methamphetamine',
+    sourceName: 'UNODC Mekong seizure reporting',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+  },
+  {
+    from: 'shan_east', to: 'tachileik', year: 2022, quantityKg: 5200, drug: 'Methamphetamine',
+    sourceName: 'UNODC Mekong seizure reporting',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+  },
+  {
+    from: 'shan_south', to: 'tachileik', year: 2022, quantityKg: 1800, drug: 'Methamphetamine',
+    sourceName: 'ACLED Myanmar event data',
+    sourceUrl: 'https://acleddata.com/asia-pacific/myanmar/',
+  },
+  {
+    from: 'kachin', to: 'kachin_in', year: 2022, quantityKg: 700, drug: 'Heroin',
+    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+  },
 ]
 
 // Conflict-pressure layer: public, aggregate observations only. "intensity" is a

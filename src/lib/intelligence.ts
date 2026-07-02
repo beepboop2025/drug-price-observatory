@@ -10,7 +10,7 @@ import { sourceReliabilityTier, sourceReliabilityWeight, type ReliabilityTier } 
 export interface EvidenceNode {
   id: string
   label: string
-  kind: 'region' | 'actor' | 'country' | 'precursor' | 'source'
+  kind: 'region' | 'actor' | 'country' | 'precursor' | 'source' | 'corridor'
   weight: number
   /** Only populated for `kind: 'source'` nodes. */
   reliability?: ReliabilityTier
@@ -133,6 +133,44 @@ function computeCorridorConcentration(
   }
 }
 
+/**
+ * Outbound-corridor concentration: the same HHI treatment as inbound
+ * precursor corridors, applied to a region's *outbound* seized-drug
+ * corridors (which border town/exit point carries its outflow). A region
+ * whose entire outbound volume clears through one border town is a sharper,
+ * higher-leverage interdiction target — and a single closure/crackdown there
+ * would fully choke its export route — than one spread across several exits.
+ */
+function computeOutflowCorridorConcentration(
+  region: string,
+  outflows: MmFlowRecord[],
+): { hhi: number | null; dominantCorridor: string | null; dominantSharePct: number | null } {
+  const byCorridor = new Map<string, number>()
+  for (const flow of outflows) {
+    if (flow.from !== region) continue
+    byCorridor.set(flow.to, (byCorridor.get(flow.to) ?? 0) + flow.quantityKg)
+  }
+  const total = [...byCorridor.values()].reduce((sum, qty) => sum + qty, 0)
+  if (total <= 0) return { hhi: null, dominantCorridor: null, dominantSharePct: null }
+
+  let hhi = 0
+  let dominantCorridor: string | null = null
+  let dominantShare = 0
+  for (const [corridor, qty] of byCorridor) {
+    const share = qty / total
+    hhi += share * share * 10_000
+    if (share > dominantShare) {
+      dominantShare = share
+      dominantCorridor = corridor
+    }
+  }
+  return {
+    hhi: Math.round(hhi),
+    dominantCorridor,
+    dominantSharePct: Math.round(dominantShare * 1000) / 10,
+  }
+}
+
 function evidenceStalenessTier(ageYears: number | null): EvidenceStaleness {
   if (ageYears === null) return 'no-data'
   if (ageYears >= STALE_EVIDENCE_AGE_YEARS) return 'stale'
@@ -217,6 +255,14 @@ export interface RegionRiskProfile {
   dominantPrecursorCorridor: string | null
   /** Share (percent) of inbound precursor supply carried by `dominantPrecursorCorridor`. */
   dominantPrecursorCorridorSharePct: number | null
+  /** Herfindahl-Hirschman Index (0-10000) of outbound seized-drug corridor concentration; null when no outflow data. */
+  outflowCorridorHHI: number | null
+  /** Concentration tier derived from `outflowCorridorHHI` using DOJ/FTC-style thresholds. */
+  outflowCorridorTier: CorridorConcentrationTier
+  /** Border-town id carrying the largest share of this region's outbound seized volume. */
+  dominantOutflowCorridor: string | null
+  /** Share (percent) of outbound seized volume carried by `dominantOutflowCorridor`. */
+  dominantOutflowCorridorSharePct: number | null
 }
 
 export interface IntelligenceBriefing {
@@ -234,6 +280,7 @@ export interface IntelligenceBriefing {
     spilloverWatchRegions: number
     staleRegions: number
     concentratedCorridorRegions: number
+    concentratedOutflowCorridorRegions: number
   }
 }
 
@@ -355,6 +402,34 @@ function detectConflictEventConflicts(
   )
 }
 
+/**
+ * Cross-source disagreement check for outbound seized-drug volumes. Only
+ * meaningful once outflow records carry `sourceName`/`sourceUrl` (optional,
+ * for backward compatibility with pre-provenance flow CSVs) — records
+ * missing attribution are excluded from `distinctSources` entirely, so a
+ * region with un-attributed flows never gets a spurious "sources disagree"
+ * note.
+ */
+function detectOutflowConflicts(
+  outflows: MmFlowRecord[],
+): Map<string, string[]> {
+  const attributed = outflows.filter((f) => f.sourceName)
+  return detectWeightedDisagreement(
+    attributed,
+    (f) => `${f.from}::${f.drug}`,
+    (f) => f.quantityKg,
+    (f) => f.sourceName ?? '',
+    (f) => f.sourceUrl,
+    (key, distinctSources, maxDeviationPct) => {
+      const [region, drug] = key.split('::')
+      return {
+        region,
+        note: `${distinctSources} sources disagree on outbound ${drug} volume (up to ${maxDeviationPct}% spread)`,
+      }
+    },
+  )
+}
+
 function mergeNoteMaps(...maps: Array<Map<string, string[]>>): Map<string, string[]> {
   const merged = new Map<string, string[]>()
   for (const map of maps) {
@@ -445,13 +520,15 @@ export function buildMyanmarIntelligenceBriefing(input: {
   outflows: MmFlowRecord[]
   /** Region-id -> bordering region-ids. Optional; spillover fields default to inert when omitted. */
   regionAdjacency?: Record<string, string[]>
+  /** Cross-border corridor towns, for labelling `dominantOutflowCorridor`. Optional; falls back to raw ids when omitted. */
+  borderNodes?: MmNode[]
 }): IntelligenceBriefing {
   const { year, regions } = input
   const regionRecords = input.regionRecords.filter((r) => r.year === year)
   const conflictEvents = input.conflictEvents.filter((r) => r.year === year)
   const precursorFlows = input.precursorFlows.filter((r) => r.year === year)
   const outflows = input.outflows.filter((r) => r.year === year)
-  const labelByRegion = new Map(regions.map((r) => [r.id, r.label]))
+  const labelByRegion = new Map([...regions, ...(input.borderNodes ?? [])].map((r) => [r.id, r.label]))
 
   const precursorByRegion = new Map<string, number>()
   for (const flow of precursorFlows) {
@@ -475,6 +552,7 @@ export function buildMyanmarIntelligenceBriefing(input: {
   const conflictNotesByRegion = mergeNoteMaps(
     detectPrecursorConflicts(precursorFlows),
     detectConflictEventConflicts(conflictEvents),
+    detectOutflowConflicts(outflows),
   )
 
   const profiles = regions.map((region) => {
@@ -489,6 +567,7 @@ export function buildMyanmarIntelligenceBriefing(input: {
     const regionSources = new Set<string>()
     conflictEvents.filter((r) => r.region === region.id).forEach((r) => regionSources.add(r.sourceName))
     precursorFlows.filter((r) => r.to === region.id).forEach((r) => regionSources.add(r.sourceName))
+    outflows.filter((r) => r.from === region.id && r.sourceName).forEach((r) => regionSources.add(r.sourceName as string))
     const evidenceCount =
       conflictEvents.filter((r) => r.region === region.id).length +
       precursorFlows.filter((r) => r.to === region.id).length +
@@ -501,6 +580,7 @@ export function buildMyanmarIntelligenceBriefing(input: {
     const regionSourceUrlByName = new Map<string, string | undefined>()
     conflictEvents.filter((r) => r.region === region.id).forEach((r) => regionSourceUrlByName.set(r.sourceName, r.sourceUrl))
     precursorFlows.filter((r) => r.to === region.id).forEach((r) => regionSourceUrlByName.set(r.sourceName, r.sourceUrl))
+    outflows.filter((r) => r.from === region.id && r.sourceName).forEach((r) => regionSourceUrlByName.set(r.sourceName as string, r.sourceUrl))
     const sourceReliabilityWeights = [...regionSources].map((name) =>
       sourceReliabilityWeight(name, regionSourceUrlByName.get(name)),
     )
@@ -557,6 +637,11 @@ export function buildMyanmarIntelligenceBriefing(input: {
       computeCorridorConcentration(region.id, precursorFlows)
     const precursorCorridorTier = corridorConcentrationTier(precursorCorridorHHI)
 
+    const { hhi: outflowCorridorHHI, dominantCorridor: dominantOutflowCorridorId, dominantSharePct: dominantOutflowCorridorSharePct } =
+      computeOutflowCorridorConcentration(region.id, outflows)
+    const outflowCorridorTier = corridorConcentrationTier(outflowCorridorHHI)
+    const dominantOutflowCorridor = dominantOutflowCorridorId ? (labelByRegion.get(dominantOutflowCorridorId) ?? dominantOutflowCorridorId) : null
+
     const drivers = [
       [conflictPressure, 'conflict pressure'],
       [precursorPressure, 'inbound precursor pressure'],
@@ -596,6 +681,10 @@ export function buildMyanmarIntelligenceBriefing(input: {
       precursorCorridorTier,
       dominantPrecursorCorridor,
       dominantPrecursorCorridorSharePct,
+      outflowCorridorHHI,
+      outflowCorridorTier,
+      dominantOutflowCorridor,
+      dominantOutflowCorridorSharePct,
       // Filled in below, once every region's own riskScore is known.
       neighborRiskScore: 0,
       neighborRegion: null as string | null,
@@ -633,12 +722,13 @@ export function buildMyanmarIntelligenceBriefing(input: {
 
   profiles.sort((a, b) => b.riskScore - a.riskScore)
 
-  const { nodes, edges } = buildEvidenceGraph({ regions, conflictEvents, precursorFlows, outflows })
+  const { nodes, edges } = buildEvidenceGraph({ regions, conflictEvents, precursorFlows, outflows, borderNodes: input.borderNodes })
   const regionsWithProvenance = profiles.filter((p) => p.evidenceCount > 1 && p.sourceDiversity > 0).length
   const conflictedRegions = profiles.filter((p) => p.hasSourceConflict).length
   const spilloverWatchRegions = profiles.filter((p) => p.spilloverWatch).length
   const staleRegions = profiles.filter((p) => p.evidenceStaleness === 'stale').length
   const concentratedCorridorRegions = profiles.filter((p) => p.precursorCorridorTier === 'concentrated').length
+  const concentratedOutflowCorridorRegions = profiles.filter((p) => p.outflowCorridorTier === 'concentrated').length
 
   return {
     year,
@@ -655,6 +745,7 @@ export function buildMyanmarIntelligenceBriefing(input: {
       spilloverWatchRegions,
       staleRegions,
       concentratedCorridorRegions,
+      concentratedOutflowCorridorRegions,
     },
   }
 }
@@ -664,6 +755,7 @@ function buildEvidenceGraph(input: {
   conflictEvents: MmConflictEventRecord[]
   precursorFlows: MmPrecursorFlowRecord[]
   outflows: MmFlowRecord[]
+  borderNodes?: MmNode[]
 }): { nodes: EvidenceNode[]; edges: EvidenceEdge[] } {
   const nodeMap = new Map<string, EvidenceNode>()
   const edges: EvidenceEdge[] = []
@@ -674,6 +766,12 @@ function buildEvidenceGraph(input: {
 
   for (const region of input.regions) {
     upsert({ id: `region:${region.id}`, label: region.label, kind: 'region', weight: 1 })
+  }
+  // Border/exit-corridor towns are a distinct node kind (not production
+  // regions) so outbound-flow edges resolve to a real node instead of a
+  // dangling `region:<border-town-id>` id that was never upserted.
+  for (const node of input.borderNodes ?? []) {
+    upsert({ id: `corridor:${node.id}`, label: node.label, kind: 'corridor', weight: 1 })
   }
 
   for (const event of input.conflictEvents) {
@@ -733,12 +831,36 @@ function buildEvidenceGraph(input: {
   }
 
   for (const flow of input.outflows) {
+    // `to` is a border/exit-corridor town id, not a production region — point
+    // the edge at its `corridor:` node (falling back to `region:` only if the
+    // caller didn't supply border nodes, so the id still resolves to *some*
+    // node rather than silently dangling).
+    const toId = nodeMap.has(`corridor:${flow.to}`) ? `corridor:${flow.to}` : `region:${flow.to}`
     edges.push({
       from: `region:${flow.from}`,
-      to: `region:${flow.to}`,
+      to: toId,
       relation: 'drug_outflow',
       weight: flow.quantityKg,
+      sourceName: flow.sourceName,
+      sourceUrl: flow.sourceUrl,
     })
+    if (flow.sourceName) {
+      upsert({
+        id: `source:${flow.sourceName}`,
+        label: flow.sourceName,
+        kind: 'source',
+        weight: 1,
+        reliability: sourceReliabilityTier(flow.sourceName, flow.sourceUrl),
+      })
+      edges.push({
+        from: `source:${flow.sourceName}`,
+        to: `region:${flow.from}`,
+        relation: 'reports',
+        weight: 1,
+        sourceName: flow.sourceName,
+        sourceUrl: flow.sourceUrl,
+      })
+    }
   }
 
   return { nodes: [...nodeMap.values()], edges }

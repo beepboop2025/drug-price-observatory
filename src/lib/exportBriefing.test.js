@@ -58,6 +58,13 @@ describe('exportBriefing', () => {
       assert.ok(dataLine.includes('concentrated'))
     })
 
+    it('includes outbound-corridor concentration fields for downstream audit', () => {
+      const csv = riskProfilesToCsv(briefing)
+      assert.ok(csv.includes('outflowCorridorHHI'))
+      assert.ok(csv.includes('outflowCorridorTier'))
+      assert.ok(csv.includes('dominantOutflowCorridor'))
+    })
+
     it('quotes fields containing commas per RFC 4180', () => {
       const csv = riskProfilesToCsv(briefing)
       // "INCB, precursors report" flows into a source name referenced by the

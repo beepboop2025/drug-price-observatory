@@ -706,4 +706,141 @@ describe('buildMyanmarIntelligenceBriefing', () => {
       assert.equal(shan.precursorCorridorTier, 'concentrated')
     })
   })
+
+  describe('outflow corridor concentration', () => {
+    const borderNodes = [
+      { id: 'muse', label: 'Muse', lat: 24, lng: 98 },
+      { id: 'mekong', label: 'Mekong SEZ', lat: 20, lng: 100 },
+    ]
+
+    it('flags a single-exit region as concentrated with a 10000 HHI and labels the border town', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        borderNodes,
+        regionRecords: [],
+        conflictEvents: [],
+        precursorFlows: [],
+        outflows: [
+          { from: 'shan_north', to: 'muse', year: 2024, quantityKg: 3000, drug: 'Methamphetamine' },
+        ],
+      })
+      const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+      assert.equal(shan.outflowCorridorHHI, 10000)
+      assert.equal(shan.outflowCorridorTier, 'concentrated')
+      assert.equal(shan.dominantOutflowCorridor, 'Muse')
+      assert.equal(shan.dominantOutflowCorridorSharePct, 100)
+      assert.equal(briefing.enterpriseReadiness.concentratedOutflowCorridorRegions, 1)
+    })
+
+    it('falls back to the raw id when no border-node labels are supplied', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        regionRecords: [],
+        conflictEvents: [],
+        precursorFlows: [],
+        outflows: [
+          { from: 'shan_north', to: 'muse', year: 2024, quantityKg: 3000, drug: 'Methamphetamine' },
+        ],
+      })
+      const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+      assert.equal(shan.dominantOutflowCorridor, 'muse')
+    })
+
+    it('rates a two-exit split as diversified/moderate per DOJ/FTC HHI thresholds', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        borderNodes,
+        regionRecords: [],
+        conflictEvents: [],
+        precursorFlows: [],
+        outflows: [
+          { from: 'shan_north', to: 'muse', year: 2024, quantityKg: 5000, drug: 'Methamphetamine' },
+          { from: 'shan_north', to: 'mekong', year: 2024, quantityKg: 5000, drug: 'Methamphetamine' },
+        ],
+      })
+      const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+      // 50/50 split: HHI = 2 * 0.5^2 * 10000 = 5000 — concentrated, matching a two-corridor duopoly.
+      assert.equal(shan.outflowCorridorHHI, 5000)
+      assert.equal(shan.outflowCorridorTier, 'concentrated')
+    })
+
+    it('reports insufficient-data when a region has no outflow records', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        borderNodes,
+        regionRecords: [],
+        conflictEvents: [],
+        precursorFlows: [],
+        outflows: [],
+      })
+      const kachin = briefing.profiles.find((p) => p.region === 'kachin')
+      assert.equal(kachin.outflowCorridorHHI, null)
+      assert.equal(kachin.outflowCorridorTier, 'insufficient-data')
+      assert.equal(kachin.dominantOutflowCorridor, null)
+    })
+  })
+
+  describe('outflow cross-source disagreement', () => {
+    it('flags disagreement when two attributed sources report materially different outbound volumes', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        regionRecords: [],
+        conflictEvents: [],
+        precursorFlows: [],
+        outflows: [
+          {
+            from: 'shan_north', to: 'muse', year: 2024, quantityKg: 1000, drug: 'Methamphetamine',
+            sourceName: 'UNODC', sourceUrl: 'https://example.org/unodc',
+          },
+          {
+            from: 'shan_north', to: 'muse', year: 2024, quantityKg: 4000, drug: 'Methamphetamine',
+            sourceName: 'Local news outlet', sourceUrl: 'https://example.com/news',
+          },
+        ],
+      })
+      const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+      assert.equal(shan.hasSourceConflict, true)
+      assert.ok(shan.conflictNotes.some((note) => note.includes('outbound Methamphetamine')))
+    })
+
+    it('does not flag disagreement when outflow records carry no source attribution', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        regionRecords: [],
+        conflictEvents: [],
+        precursorFlows: [],
+        outflows: [
+          { from: 'shan_north', to: 'muse', year: 2024, quantityKg: 1000, drug: 'Methamphetamine' },
+          { from: 'shan_north', to: 'tachileik', year: 2024, quantityKg: 9000, drug: 'Methamphetamine' },
+        ],
+      })
+      const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+      assert.equal(shan.hasSourceConflict, false)
+    })
+
+    it('counts an attributed outflow source toward region source diversity and the evidence-graph reports edge', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        regionRecords: [],
+        conflictEvents: [],
+        precursorFlows: [],
+        outflows: [
+          {
+            from: 'shan_north', to: 'muse', year: 2024, quantityKg: 1000, drug: 'Methamphetamine',
+            sourceName: 'UNODC', sourceUrl: 'https://example.org/unodc',
+          },
+        ],
+      })
+      const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+      assert.equal(shan.sourceDiversity, 1)
+      assert.ok(briefing.edges.some((edge) => edge.relation === 'reports' && edge.sourceName === 'UNODC' && edge.to === 'region:shan_north'))
+    })
+  })
 })
