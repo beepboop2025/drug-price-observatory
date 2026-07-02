@@ -19,12 +19,31 @@ const DEFAULT_MAX_BYTES = 4 * 1024 * 1024
 const DEFAULT_TIMEOUT_MS = 20_000
 const DEFAULT_MAX_REDIRECTS = 5
 const DEFAULT_MIN_INTERVAL_MS = 1500
+const DEFAULT_MAX_RETRIES = 2
+const DEFAULT_RETRY_BASE_MS = 500
 const USER_AGENT = 'DrugPriceObservatory/0.1 (public data preparation; aggregate research only)'
 
 export class FetchError extends Error {}
 export class BlockedAddressError extends FetchError {}
 export class ResponseTooLargeError extends FetchError {}
 export class TooManyRedirectsError extends FetchError {}
+
+/**
+ * Transient failures (network hiccups, 5xx, timeouts) are safe to retry with
+ * backoff. Policy/security failures (blocked address, robots disallow, host
+ * not allowlisted, 4xx) must never be retried — retrying those would just
+ * repeat a request we have already decided is unsafe or invalid.
+ */
+export function isRetryableError(err) {
+  if (err instanceof BlockedAddressError) return false
+  if (!(err instanceof FetchError)) return false
+  const message = String(err.message ?? '')
+  if (/^http status 4\d\d/.test(message)) return false
+  if (/robots\.txt disallows/.test(message)) return false
+  if (/host is not in manifest allowlist/.test(message)) return false
+  if (/scheme not allowed/.test(message)) return false
+  return true
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const defaultManifest = path.join(__dirname, 'myanmar-sources.json')
@@ -37,9 +56,12 @@ function parseArgs(argv) {
     timeoutMs: DEFAULT_TIMEOUT_MS,
     maxRedirects: DEFAULT_MAX_REDIRECTS,
     minIntervalMs: DEFAULT_MIN_INTERVAL_MS,
+    maxRetries: DEFAULT_MAX_RETRIES,
+    retryBaseMs: DEFAULT_RETRY_BASE_MS,
     respectRobots: true,
     cacheDir: '',
     auditLog: '',
+    dedupeAgainst: '',
     pretty: false,
   }
 
@@ -51,8 +73,11 @@ function parseArgs(argv) {
     else if (arg === '--timeout-ms') args.timeoutMs = Number(argv[++i])
     else if (arg === '--max-redirects') args.maxRedirects = Number(argv[++i])
     else if (arg === '--min-interval-ms') args.minIntervalMs = Number(argv[++i])
+    else if (arg === '--max-retries') args.maxRetries = Number(argv[++i])
+    else if (arg === '--retry-base-ms') args.retryBaseMs = Number(argv[++i])
     else if (arg === '--cache-dir') args.cacheDir = argv[++i]
     else if (arg === '--audit-log') args.auditLog = argv[++i]
+    else if (arg === '--dedupe-against') args.dedupeAgainst = argv[++i]
     else if (arg === '--no-robots') args.respectRobots = false
     else if (arg === '--pretty') args.pretty = true
     else if (arg === '--help') {
@@ -76,8 +101,11 @@ Options:
   --timeout-ms <number>   Per-request timeout (default: ${DEFAULT_TIMEOUT_MS})
   --max-redirects <n>     Redirect cap (default: ${DEFAULT_MAX_REDIRECTS})
   --min-interval-ms <n>   Minimum interval per host (default: ${DEFAULT_MIN_INTERVAL_MS})
+  --max-retries <n>       Retries for transient (network/5xx) failures (default: ${DEFAULT_MAX_RETRIES})
+  --retry-base-ms <n>     Exponential backoff base delay (default: ${DEFAULT_RETRY_BASE_MS})
   --cache-dir <path>      Reuse/write fetched source bodies by URL hash
   --audit-log <path>      Append JSONL audit events for every source
+  --dedupe-against <path> Previous observation CSV; suppress already-seen item/keyword rows
   --no-robots             Disable robots.txt checks (off by default only for tests)
   --pretty                Print a human summary to stderr
 `)
@@ -402,12 +430,16 @@ export async function scrapeSources(sources, options = {}) {
   const errors = []
   const robotsCache = new Map()
   const lastFetchByHost = new Map()
+  const seenObservations = options.dedupeAgainst
+    ? await loadObservationFingerprints(options.dedupeAgainst)
+    : null
+  let duplicatesSuppressed = 0
 
   for (const source of sources) {
     try {
       await emitAudit(options.auditLog, { event: 'source_start', sourceId: source.id, url: source.url, observedAt })
       await waitForHostBudget(source.url, lastFetchByHost, options.minIntervalMs ?? DEFAULT_MIN_INTERVAL_MS)
-      const html = await fetchWithCache(source, {
+      const html = await fetchWithRetry(source, {
         ...options,
         allowedHosts,
         robotsCache,
@@ -415,7 +447,14 @@ export async function scrapeSources(sources, options = {}) {
       const items = extractItems(html, source.selector)
       const normalizedText = normalizeBody(items.length ? items.join('\n') : stripTags(html))
       const itemFp = items.length ? contentKey(...items.sort()) : ''
-      const sourceRows = keywordObservations(source, normalizedText, observedAt, itemFp)
+      let sourceRows = keywordObservations(source, normalizedText, observedAt, itemFp)
+
+      if (seenObservations) {
+        const before = sourceRows.length
+        sourceRows = sourceRows.filter((row) => !seenObservations.has(observationFingerprint(row)))
+        duplicatesSuppressed += before - sourceRows.length
+      }
+
       rows.push(...sourceRows)
       await emitAudit(options.auditLog, {
         event: 'source_success',
@@ -442,7 +481,86 @@ export async function scrapeSources(sources, options = {}) {
     }
   }
 
-  return { rows, errors }
+  return { rows, errors, duplicatesSuppressed }
+}
+
+/**
+ * Retries only transient (network/5xx/timeout) failures with exponential
+ * backoff + jitter. Policy failures (blocked address, robots, allowlist) fail
+ * immediately — see `isRetryableError`.
+ */
+async function fetchWithRetry(source, options) {
+  const maxRetries = Number.isFinite(options.maxRetries) ? options.maxRetries : DEFAULT_MAX_RETRIES
+  const retryBaseMs = Number.isFinite(options.retryBaseMs) ? options.retryBaseMs : DEFAULT_RETRY_BASE_MS
+  let lastError
+
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    try {
+      return await fetchWithCache(source, options)
+    } catch (err) {
+      lastError = err
+      if (attempt >= maxRetries || !isRetryableError(err)) throw err
+      const backoff = retryBaseMs * 2 ** attempt
+      const jitter = Math.random() * retryBaseMs
+      await new Promise((resolve) => setTimeout(resolve, backoff + jitter))
+    }
+  }
+
+  throw lastError
+}
+
+/** Fingerprint used to recognize the same keyword observation across runs. */
+function observationFingerprint(row) {
+  return contentKey(row.sourceId, row.keyword, row.itemSha256 || row.contentSha256)
+}
+
+function parseCsvLine(line) {
+  const cells = []
+  let current = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i]
+    if (inQuotes) {
+      if (char === '"' && line[i + 1] === '"') {
+        current += '"'
+        i += 1
+      } else if (char === '"') {
+        inQuotes = false
+      } else {
+        current += char
+      }
+    } else if (char === '"') {
+      inQuotes = true
+    } else if (char === ',') {
+      cells.push(current)
+      current = ''
+    } else {
+      current += char
+    }
+  }
+  cells.push(current)
+  return cells
+}
+
+/** Loads fingerprints of previously emitted observations so repeat scrapes stay idempotent. */
+export async function loadObservationFingerprints(csvPath) {
+  const seen = new Set()
+  let body
+  try {
+    body = await fs.readFile(csvPath, 'utf8')
+  } catch (err) {
+    if (err.code === 'ENOENT') return seen
+    throw err
+  }
+  const lines = body.split(/\r?\n/).filter(Boolean)
+  if (lines.length === 0) return seen
+  const headers = parseCsvLine(lines[0])
+  for (const line of lines.slice(1)) {
+    const cells = parseCsvLine(line)
+    const row = Object.fromEntries(headers.map((header, i) => [header, cells[i] ?? '']))
+    seen.add(observationFingerprint(row))
+  }
+  return seen
 }
 
 async function waitForHostBudget(url, lastFetchByHost, minIntervalMs) {
@@ -511,7 +629,7 @@ async function readLastAuditHash(auditLog) {
 async function main() {
   const args = parseArgs(process.argv.slice(2))
   const sources = await readManifest(args.manifest)
-  const { rows, errors } = await scrapeSources(sources, args)
+  const { rows, errors, duplicatesSuppressed } = await scrapeSources(sources, args)
   const csv = observationsToCsv(rows)
 
   if (args.output) {
@@ -523,6 +641,9 @@ async function main() {
 
   if (args.pretty) {
     process.stderr.write(`Scraped ${sources.length} source(s), matched ${rows.length} keyword observation(s).\n`)
+    if (duplicatesSuppressed) {
+      process.stderr.write(`Suppressed ${duplicatesSuppressed} duplicate observation(s) already seen in --dedupe-against.\n`)
+    }
     for (const error of errors) {
       process.stderr.write(`WARN ${error.sourceId}: ${error.error}\n`)
     }

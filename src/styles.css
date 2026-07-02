@@ -340,6 +340,19 @@ h3 { font-family: var(--font-display); font-weight: 400; font-size: 1.2rem; lett
   padding: 0.18rem 0.45rem;
   background: rgba(161, 236, 255, 0.06);
 }
+.verification-tier { font-size: 0.72rem; margin: 0 0 0.5rem; font-weight: 600; letter-spacing: 0.02em; }
+.verification-tier.tier-multi-source { color: #7fe0a8; }
+.verification-tier.tier-single-source { color: #e0c37f; }
+.verification-tier.tier-unverified { color: var(--muted); }
+.conflict-flag {
+  color: #ffab98;
+  font-size: 0.78rem;
+  margin: 0 0 0.65rem;
+  border: 1px solid rgba(255, 122, 89, 0.4);
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  background: rgba(255, 122, 89, 0.08);
+}
 
 /* ---- footer -------------------------------------------------------------- */
 .app-footer { margin-top: 2.5rem; border-top: 1px solid var(--border); padding-top: 1.25rem; }

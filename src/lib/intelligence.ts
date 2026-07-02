@@ -22,6 +22,14 @@ export interface EvidenceEdge {
   sourceUrl?: string
 }
 
+/**
+ * Verification tier follows the multi-source verification gate pattern used by
+ * open OSINT pipelines (e.g. Splink-based cross-source entity resolution and
+ * "at least two independent sources" claim gates): a region's fused evidence
+ * is only as trustworthy as the number of independent source families behind it.
+ */
+export type VerificationTier = 'multi-source' | 'single-source' | 'unverified'
+
 export interface RegionRiskProfile {
   region: string
   label: string
@@ -36,6 +44,9 @@ export interface RegionRiskProfile {
   syntheticActivity: number
   opiumHa: number
   drivers: string[]
+  verificationTier: VerificationTier
+  hasSourceConflict: boolean
+  conflictNotes: string[]
 }
 
 export interface IntelligenceBriefing {
@@ -48,7 +59,52 @@ export interface IntelligenceBriefing {
     multiSourceRegions: number
     highRiskRegions: number
     evidenceRecords: number
+    conflictedRegions: number
   }
+}
+
+/**
+ * Threshold beyond which two independent-source quantity reports for the same
+ * region/precursor/year are treated as disagreeing rather than as normal
+ * reporting-window variance. Modelled after conflict-driven RAG summarization
+ * (CARE-RAG): flag disagreement instead of silently averaging it away.
+ */
+const CONFLICT_RELATIVE_DEVIATION = 0.5
+const SOURCE_CONFLICT_PENALTY = 15
+
+function detectPrecursorConflicts(
+  precursorFlows: MmPrecursorFlowRecord[],
+): Map<string, string[]> {
+  const notesByRegion = new Map<string, string[]>()
+  const groups = new Map<string, MmPrecursorFlowRecord[]>()
+
+  for (const flow of precursorFlows) {
+    const key = `${flow.to}::${flow.precursor}`
+    const bucket = groups.get(key) ?? []
+    bucket.push(flow)
+    groups.set(key, bucket)
+  }
+
+  for (const [key, flows] of groups) {
+    const distinctSources = new Set(flows.map((f) => f.sourceName))
+    if (distinctSources.size < 2) continue
+
+    const quantities = flows.map((f) => f.quantityKg)
+    const mean = quantities.reduce((sum, q) => sum + q, 0) / quantities.length
+    if (mean <= 0) continue
+    const maxDeviation = Math.max(...quantities.map((q) => Math.abs(q - mean) / mean))
+
+    if (maxDeviation > CONFLICT_RELATIVE_DEVIATION) {
+      const region = key.split('::')[0]
+      const precursor = flows[0].precursor.replace(/_/g, ' ')
+      const note = `${distinctSources.size} sources disagree on ${precursor} inflow (up to ${Math.round(maxDeviation * 100)}% spread)`
+      const notes = notesByRegion.get(region) ?? []
+      notes.push(note)
+      notesByRegion.set(region, notes)
+    }
+  }
+
+  return notesByRegion
 }
 
 const clamp = (value: number, min = 0, max = 100): number => Math.max(min, Math.min(max, value))
@@ -95,6 +151,7 @@ export function buildMyanmarIntelligenceBriefing(input: {
   const maxPrecursor = Math.max(0, ...precursorByRegion.values())
   const maxOutflow = Math.max(0, ...outflowByRegion.values())
   const maxOpium = Math.max(0, ...regionRecords.map((r) => r.opiumHa))
+  const conflictNotesByRegion = detectPrecursorConflicts(precursorFlows)
 
   const profiles = regions.map((region) => {
     const stat = regionRecords.find((r) => r.region === region.id)
@@ -121,11 +178,18 @@ export function buildMyanmarIntelligenceBriefing(input: {
       syntheticActivity * 0.2 +
       opiumPressure * 0.1,
     )
+    const conflictNotes = conflictNotesByRegion.get(region.id) ?? []
+    const hasSourceConflict = conflictNotes.length > 0
+
     const confidenceScore = clamp(
       Math.min(100, evidenceCount * 16) * 0.45 +
       Math.min(100, regionSources.size * 34) * 0.35 +
-      (stat ? 20 : 0),
+      (stat ? 20 : 0) -
+      (hasSourceConflict ? SOURCE_CONFLICT_PENALTY : 0),
     )
+
+    const verificationTier: VerificationTier =
+      regionSources.size >= 2 ? 'multi-source' : regionSources.size === 1 ? 'single-source' : 'unverified'
 
     const drivers = [
       [conflictPressure, 'conflict pressure'],
@@ -152,11 +216,15 @@ export function buildMyanmarIntelligenceBriefing(input: {
       syntheticActivity: Math.round(syntheticActivity),
       opiumHa,
       drivers,
+      verificationTier,
+      hasSourceConflict,
+      conflictNotes,
     }
   }).sort((a, b) => b.riskScore - a.riskScore)
 
   const { nodes, edges } = buildEvidenceGraph({ regions, conflictEvents, precursorFlows, outflows })
   const regionsWithProvenance = profiles.filter((p) => p.evidenceCount > 1 && p.sourceDiversity > 0).length
+  const conflictedRegions = profiles.filter((p) => p.hasSourceConflict).length
 
   return {
     year,
@@ -168,6 +236,7 @@ export function buildMyanmarIntelligenceBriefing(input: {
       multiSourceRegions: profiles.filter((p) => p.sourceDiversity >= 2).length,
       highRiskRegions: profiles.filter((p) => p.riskScore >= 70).length,
       evidenceRecords: conflictEvents.length + precursorFlows.length + outflows.length + regionRecords.length,
+      conflictedRegions,
     },
   }
 }

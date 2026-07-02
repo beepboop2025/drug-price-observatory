@@ -48,6 +48,8 @@ describe('buildMyanmarIntelligenceBriefing', () => {
     assert.equal(briefing.profiles[0].region, 'shan_north')
     assert.ok(briefing.profiles[0].riskScore > briefing.profiles[1].riskScore)
     assert.equal(briefing.profiles[0].sourceDiversity, 2)
+    assert.equal(briefing.profiles[0].verificationTier, 'multi-source')
+    assert.equal(briefing.profiles[1].verificationTier, 'unverified')
     assert.equal(briefing.enterpriseReadiness.multiSourceRegions, 1)
     assert.ok(briefing.edges.some((edge) => edge.relation === 'precursor_inflow'))
     assert.ok(briefing.edges.some((edge) => edge.relation === 'conflict_pressure'))
@@ -99,5 +101,55 @@ describe('buildMyanmarIntelligenceBriefing', () => {
       official.edges.find((edge) => edge.relation === 'precursor_inflow').weight >
         estimated.edges.find((edge) => edge.relation === 'precursor_inflow').weight,
     )
+  })
+
+  it('flags cross-source conflicts when independent precursor reports disagree materially and penalizes confidence', () => {
+    const agreeing = buildMyanmarIntelligenceBriefing({
+      year: 2024,
+      regions,
+      regionRecords: [],
+      conflictEvents: [],
+      precursorFlows: [
+        {
+          originCountry: 'China', transitCountry: null, to: 'shan_north', year: 2024,
+          precursor: 'meth_precursors', quantityKg: 1000, confidence: 'official',
+          sourceName: 'INCB', sourceUrl: 'https://example.org/incb',
+        },
+        {
+          originCountry: 'China', transitCountry: null, to: 'shan_north', year: 2024,
+          precursor: 'meth_precursors', quantityKg: 1050, confidence: 'reported',
+          sourceName: 'UNODC', sourceUrl: 'https://example.org/unodc',
+        },
+      ],
+      outflows: [],
+    })
+    const conflicting = buildMyanmarIntelligenceBriefing({
+      year: 2024,
+      regions,
+      regionRecords: [],
+      conflictEvents: [],
+      precursorFlows: [
+        {
+          originCountry: 'China', transitCountry: null, to: 'shan_north', year: 2024,
+          precursor: 'meth_precursors', quantityKg: 1000, confidence: 'official',
+          sourceName: 'INCB', sourceUrl: 'https://example.org/incb',
+        },
+        {
+          originCountry: 'China', transitCountry: null, to: 'shan_north', year: 2024,
+          precursor: 'meth_precursors', quantityKg: 4000, confidence: 'reported',
+          sourceName: 'UNODC', sourceUrl: 'https://example.org/unodc',
+        },
+      ],
+      outflows: [],
+    })
+
+    const agreeingProfile = agreeing.profiles.find((p) => p.region === 'shan_north')
+    const conflictingProfile = conflicting.profiles.find((p) => p.region === 'shan_north')
+
+    assert.equal(agreeingProfile.hasSourceConflict, false)
+    assert.equal(conflictingProfile.hasSourceConflict, true)
+    assert.ok(conflictingProfile.conflictNotes[0].includes('sources disagree'))
+    assert.ok(conflictingProfile.confidenceScore < agreeingProfile.confidenceScore)
+    assert.equal(conflicting.enterpriseReadiness.conflictedRegions, 1)
   })
 })

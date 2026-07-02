@@ -7,9 +7,11 @@ intelligence workflow. The design is based on recent literature patterns:
 |---|---|---|
 | Event/entity knowledge graphs | EventRAG (ACL 2025); GraphRAG survey (arXiv:2408.08921); temporal-causal entity-event KGs (arXiv:2506.05939) | `src/lib/intelligence.ts` builds event/entity evidence nodes and edges for conflict actors, source countries, regions, sources, precursor inflows, and drug outflows. |
 | Uncertainty and source reliability | LLM uncertainty survey (arXiv:2412.05563); misinformation-source webgraphs (arXiv:2401.02379) | The Enterprise Intel tab exposes confidence scores, source diversity, evidence counts, and downweights estimated precursor records. |
+| Multi-source verification gates | Conflict-driven evidence summarization / CARE-RAG (arXiv:2507.01281); probabilistic cross-source entity resolution (Splink-based OSINT pipelines) | Each region profile carries an explicit `verificationTier` (multi-source / single-source / unverified). Precursor-inflow reports from independent sources that materially disagree (>50% relative deviation) are flagged as a cross-source conflict and the confidence score is penalized rather than silently averaged away. |
 | Human-in-the-loop OSINT review | OSINT Research Studios (arXiv:2401.00928); AIDE human validation for data extraction (arXiv:2501.11840) | Scraper output remains an analyst work queue with excerpts and hashes; it is not directly loaded as factual app data. |
 | Supply-chain visibility via KGs | Supply-chain KG + LLM paper (arXiv:2408.07705); GNN/federated supply-chain analytics (arXiv:2503.07231) | Country-to-region precursor inflow records can be fused with conflict pressure and outbound seizure records to surface hidden dependency risk. |
 | Provenance and crawler governance | Blockchain/federated provenance architecture (arXiv:2505.24675); crawler policy study (arXiv:2411.15091); SSRF taint-analysis work (arXiv:2502.21026) | The scraper has a source manifest, host allowlist, DNS/private-IP refusal, robots.txt checks, per-host rate budgets, cache, and hash-chained JSONL audit logs. |
+| Crawler resilience & idempotency | Crawler policy study (arXiv:2411.15091); large-scale web-crawl reliability practice | Transient failures (network errors, timeouts, 5xx) are retried with exponential backoff + jitter; policy failures (blocked address, robots disallow, host not allowlisted, 4xx) never retry. Repeat scrapes can dedupe against a prior observation CSV so re-running the same manifest doesn't grow the review queue with identical rows. |
 
 ## Enterprise Intel tab
 
@@ -18,7 +20,16 @@ The tab computes deterministic, explainable profiles per Myanmar region:
 - **Risk score** blends conflict pressure, inbound precursor pressure, outbound
   seizure pressure, synthetic-drug activity, and opium-cultivation pressure.
 - **Confidence score** rewards evidence count, source diversity, and availability
-  of region statistics.
+  of region statistics, and is penalized when independent sources disagree on the
+  same precursor inflow (see verification gate below).
+- **Verification tier** — `multi-source`, `single-source`, or `unverified` —
+  states plainly whether a region's evidence has been corroborated by more than
+  one independent source family, following multi-source verification gate
+  practice from open OSINT pipelines.
+- **Cross-source conflict flag** — when two or more independent sources report
+  materially different quantities for the same region/precursor/year, the
+  region is flagged with a conflict note instead of quietly blending the
+  numbers together (conflict-driven summarization pattern).
 - **Evidence graph ledger** lists the strongest event/entity relations so an
   analyst can trace why a score changed.
 
@@ -34,6 +45,7 @@ npm run scrape:myanmar -- \
   --cache-dir .cache/myanmar-scrape \
   --audit-log docs/sources/myanmar-audit.jsonl \
   --out docs/sources/myanmar-observations.csv \
+  --dedupe-against docs/sources/myanmar-observations.csv \
   --pretty
 ```
 
@@ -44,9 +56,14 @@ The scraper:
 3. rejects loopback, private, link-local, multicast, and reserved DNS results;
 4. checks `robots.txt` unless `--no-robots` is explicitly passed for tests;
 5. enforces per-host request spacing;
-6. caches source bodies by URL hash;
-7. writes hash-chained JSONL audit events with `previousHash` and `auditHash`;
-8. emits keyword excerpts and content fingerprints for analyst review.
+6. retries only transient network/5xx/timeout failures with exponential
+   backoff + jitter (`--max-retries`, `--retry-base-ms`) — policy failures
+   (blocked address, robots disallow, allowlist miss, 4xx) never retry;
+7. caches source bodies by URL hash;
+8. optionally suppresses observations already present in a prior run's CSV via
+   `--dedupe-against`, keeping repeat scrapes idempotent for the analyst queue;
+9. writes hash-chained JSONL audit events with `previousHash` and `auditHash`;
+10. emits keyword excerpts and content fingerprints for analyst review.
 
 The observation CSV is intentionally **not** an app dataset. Analysts verify
 source passages, then code curated rows into the Myanmar conflict / precursor CSV

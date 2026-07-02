@@ -67,6 +67,10 @@ export default function IntelligenceBriefing() {
           <span className="stat-value">{briefing.nodes.length}/{briefing.edges.length}</span>
           <span className="stat-label">Graph nodes / edges</span>
         </div>
+        <div className="stat">
+          <span className="stat-value">{briefing.enterpriseReadiness.conflictedRegions}</span>
+          <span className="stat-label">Regions with cross-source conflicts</span>
+        </div>
       </div>
 
       <div className="intel-grid">
@@ -83,6 +87,16 @@ export default function IntelligenceBriefing() {
               Confidence {profile.confidenceScore}/100 from {profile.evidenceCount} evidence
               record(s) and {profile.sourceDiversity} source family/families.
             </p>
+            <p className={`verification-tier tier-${profile.verificationTier}`}>
+              {profile.verificationTier === 'multi-source' && 'Multi-source verified'}
+              {profile.verificationTier === 'single-source' && 'Single-source — unverified'}
+              {profile.verificationTier === 'unverified' && 'No independent sourcing'}
+            </p>
+            {profile.hasSourceConflict && (
+              <p className="conflict-flag" title={profile.conflictNotes.join('; ')}>
+                ⚠ Cross-source conflict: {profile.conflictNotes[0]}
+              </p>
+            )}
             <div className="driver-list">
               {profile.drivers.map((driver) => <span key={driver}>{driver}</span>)}
             </div>
