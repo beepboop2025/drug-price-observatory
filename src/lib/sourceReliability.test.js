@@ -1,5 +1,5 @@
 import { describe, it, assert } from 'vitest'
-import { sourceReliabilityTier, sourceReliabilityWeight } from './sourceReliability'
+import { canonicalSourceId, sourceReliabilityTier, sourceReliabilityWeight } from './sourceReliability'
 
 describe('sourceReliabilityTier', () => {
   it('grades well-known intergovernmental and conflict-monitoring sources as high reliability', () => {
@@ -34,5 +34,35 @@ describe('sourceReliabilityTier', () => {
     assert.ok(high > medium)
     assert.ok(medium > low)
     assert.ok(low > 0)
+  })
+})
+
+describe('canonicalSourceId', () => {
+  it('collapses name-string variants of the same organisation into one family', () => {
+    assert.equal(canonicalSourceId('UNODC'), canonicalSourceId('UNODC Myanmar Opium Survey 2024'))
+    assert.equal(canonicalSourceId('ACLED'), canonicalSourceId('ACLED Myanmar event data'))
+    assert.equal(canonicalSourceId('International Crisis Group'), canonicalSourceId('Crisis Group briefing'))
+  })
+
+  it('resolves name variants via matching domain when the name itself is ambiguous', () => {
+    assert.equal(canonicalSourceId('Ministry statement', 'https://www.unodc.org/statement'), canonicalSourceId('UNODC'))
+  })
+
+  it('keeps genuinely distinct organisations as distinct families', () => {
+    assert.notEqual(canonicalSourceId('UNODC'), canonicalSourceId('INCB'))
+    assert.notEqual(canonicalSourceId('Reuters'), canonicalSourceId('AFP'))
+  })
+
+  it('normalises unrecognised source names so casing/whitespace differences still collapse', () => {
+    assert.equal(canonicalSourceId('Local NGO Bulletin'), canonicalSourceId(' local ngo bulletin '))
+  })
+
+  it('keeps genuinely distinct unrecognised sources apart', () => {
+    assert.notEqual(canonicalSourceId('Local NGO Bulletin'), canonicalSourceId('Another Local Outlet'))
+  })
+
+  it('falls back to a stable "unknown" id when there is no name or url', () => {
+    assert.equal(canonicalSourceId(undefined), 'unknown')
+    assert.equal(canonicalSourceId(null), 'unknown')
   })
 })

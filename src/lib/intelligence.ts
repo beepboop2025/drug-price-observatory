@@ -5,7 +5,7 @@ import type {
   MmPrecursorFlowRecord,
   MmRegionRecord,
 } from '../types'
-import { sourceReliabilityTier, sourceReliabilityWeight, type ReliabilityTier } from './sourceReliability'
+import { canonicalSourceId, sourceReliabilityTier, sourceReliabilityWeight, type ReliabilityTier } from './sourceReliability'
 
 export interface EvidenceNode {
   id: string
@@ -210,6 +210,14 @@ export interface RegionRiskProfile {
   year: number
   riskScore: number
   confidenceScore: number
+  /**
+   * Count of distinct *independent source families* (see
+   * `canonicalSourceId`) reporting on this region — not raw source-name
+   * strings. Two records attributed to name-string variants of the same
+   * organisation collapse to one family, so this doesn't overstate
+   * corroboration when a scraper or analyst enters the same reporter under
+   * slightly different names across years/records.
+   */
   sourceDiversity: number
   evidenceCount: number
   conflictPressure: number
@@ -326,7 +334,11 @@ function detectWeightedDisagreement<T>(
   }
 
   for (const [key, group] of groups) {
-    const distinctSources = new Set(group.map(sourceNameOf))
+    // Count distinct *source families*, not raw name strings — two records
+    // attributed to name-string variants of the same organisation (see
+    // `canonicalSourceId`) are one source, not independent corroboration,
+    // and shouldn't trip the 2+-source disagreement gate on their own.
+    const distinctSources = new Set(group.map((r) => canonicalSourceId(sourceNameOf(r), sourceUrlOf(r))))
     if (distinctSources.size < 2) continue
 
     // Reliability-weighted mean: a well-established intergovernmental source
@@ -581,6 +593,14 @@ export function buildMyanmarIntelligenceBriefing(input: {
     conflictEvents.filter((r) => r.region === region.id).forEach((r) => regionSourceUrlByName.set(r.sourceName, r.sourceUrl))
     precursorFlows.filter((r) => r.to === region.id).forEach((r) => regionSourceUrlByName.set(r.sourceName, r.sourceUrl))
     outflows.filter((r) => r.from === region.id && r.sourceName).forEach((r) => regionSourceUrlByName.set(r.sourceName as string, r.sourceUrl))
+    // Source *diversity* is measured on independent source families (see
+    // `canonicalSourceId`), not raw name strings: two records attributed to
+    // name-string variants of the same organisation are one corroborating
+    // source, not two, so they shouldn't inflate `sourceDiversity`,
+    // `verificationTier`, or the confidence score's source-count term.
+    const regionSourceFamilies = new Set(
+      [...regionSources].map((name) => canonicalSourceId(name, regionSourceUrlByName.get(name))),
+    )
     const sourceReliabilityWeights = [...regionSources].map((name) =>
       sourceReliabilityWeight(name, regionSourceUrlByName.get(name)),
     )
@@ -624,14 +644,14 @@ export function buildMyanmarIntelligenceBriefing(input: {
 
     const confidenceScore = clamp(
       Math.min(100, evidenceCount * 16) * 0.45 +
-      Math.min(100, regionSources.size * 34) * 0.35 * (0.5 + 0.5 * avgSourceReliability) +
+      Math.min(100, regionSourceFamilies.size * 34) * 0.35 * (0.5 + 0.5 * avgSourceReliability) +
       (stat ? 20 : 0) -
       (hasSourceConflict ? SOURCE_CONFLICT_PENALTY : 0) -
       stalenessPenalty,
     )
 
     const verificationTier: VerificationTier =
-      regionSources.size >= 2 ? 'multi-source' : regionSources.size === 1 ? 'single-source' : 'unverified'
+      regionSourceFamilies.size >= 2 ? 'multi-source' : regionSourceFamilies.size === 1 ? 'single-source' : 'unverified'
 
     const { hhi: precursorCorridorHHI, dominantCorridor: dominantPrecursorCorridor, dominantSharePct: dominantPrecursorCorridorSharePct } =
       computeCorridorConcentration(region.id, precursorFlows)
@@ -659,7 +679,7 @@ export function buildMyanmarIntelligenceBriefing(input: {
       year,
       riskScore: Math.round(riskScore),
       confidenceScore: Math.round(confidenceScore),
-      sourceDiversity: regionSources.size,
+      sourceDiversity: regionSourceFamilies.size,
       evidenceCount,
       conflictPressure: Math.round(conflictPressure),
       precursorPressure: Math.round(precursorPressure),

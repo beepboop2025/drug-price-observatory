@@ -843,4 +843,60 @@ describe('buildMyanmarIntelligenceBriefing', () => {
       assert.ok(briefing.edges.some((edge) => edge.relation === 'reports' && edge.sourceName === 'UNODC' && edge.to === 'region:shan_north'))
     })
   })
+
+  describe('source-family diversity (independence discounting)', () => {
+    it('does not inflate source diversity when two records cite name-string variants of the same organisation', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        regionRecords: [],
+        conflictEvents: [
+          {
+            region: 'shan_north', year: 2024, actor: 'Border militia', actorType: 'militia',
+            eventType: 'clash', intensity: 80, sourceName: 'UNODC Myanmar Opium Survey 2024',
+            sourceUrl: 'https://unodc.org/survey',
+          },
+        ],
+        precursorFlows: [
+          {
+            originCountry: 'China', transitCountry: null, to: 'shan_north', year: 2024,
+            precursor: 'meth_precursors', quantityKg: 4000, confidence: 'official',
+            sourceName: 'UNODC', sourceUrl: 'https://unodc.org/precursors',
+          },
+        ],
+        outflows: [],
+      })
+      const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+      // Both records are UNODC under different name strings — one independent
+      // source family, not two, so this must stay single-source rather than
+      // being miscounted as corroborated multi-source evidence.
+      assert.equal(shan.sourceDiversity, 1)
+      assert.equal(shan.verificationTier, 'single-source')
+    })
+
+    it('still counts genuinely distinct organisations as independent sources', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        regionRecords: [],
+        conflictEvents: [
+          {
+            region: 'shan_north', year: 2024, actor: 'Border militia', actorType: 'militia',
+            eventType: 'clash', intensity: 80, sourceName: 'ACLED', sourceUrl: 'https://acleddata.com',
+          },
+        ],
+        precursorFlows: [
+          {
+            originCountry: 'China', transitCountry: null, to: 'shan_north', year: 2024,
+            precursor: 'meth_precursors', quantityKg: 4000, confidence: 'official',
+            sourceName: 'UNODC', sourceUrl: 'https://unodc.org',
+          },
+        ],
+        outflows: [],
+      })
+      const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+      assert.equal(shan.sourceDiversity, 2)
+      assert.equal(shan.verificationTier, 'multi-source')
+    })
+  })
 })
