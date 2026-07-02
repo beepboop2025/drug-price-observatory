@@ -26,7 +26,7 @@ function toCsv(headers: string[], rows: Array<Array<string | number | boolean | 
 export function riskProfilesToCsv(briefing: IntelligenceBriefing): string {
   const headers = [
     'region', 'label', 'year', 'riskScore', 'confidenceScore', 'verificationTier',
-    'sourceDiversity', 'avgSourceReliability', 'evidenceCount',
+    'sourceDiversity', 'rawSourceNameCount', 'avgSourceReliability', 'evidenceCount',
     'conflictPressure', 'precursorPressure', 'outflowPressure', 'syntheticActivity', 'opiumHa',
     'trajectory', 'trajectoryChangePct', 'trajectoryBaselineYear',
     'hasSourceConflict', 'conflictNotes',
@@ -38,7 +38,7 @@ export function riskProfilesToCsv(briefing: IntelligenceBriefing): string {
   ]
   const rows = briefing.profiles.map((p) => [
     p.region, p.label, p.year, p.riskScore, p.confidenceScore, p.verificationTier,
-    p.sourceDiversity, p.avgSourceReliability, p.evidenceCount,
+    p.sourceDiversity, p.rawSourceNameCount, p.avgSourceReliability, p.evidenceCount,
     p.conflictPressure, p.precursorPressure, p.outflowPressure, p.syntheticActivity, p.opiumHa,
     p.trajectory, p.trajectoryChangePct, p.trajectoryBaselineYear,
     p.hasSourceConflict, p.conflictNotes.join('; '),

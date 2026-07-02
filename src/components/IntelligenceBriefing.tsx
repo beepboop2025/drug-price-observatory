@@ -153,6 +153,10 @@ export default function IntelligenceBriefing() {
           <span className="stat-value">{briefing.enterpriseReadiness.concentratedOutflowCorridorRegions}</span>
           <span className="stat-label">Regions with concentrated outbound corridor</span>
         </div>
+        <div className="stat">
+          <span className="stat-value">{briefing.enterpriseReadiness.duplicateSourceNameRegions}</span>
+          <span className="stat-label">Regions with duplicate source-name variants</span>
+        </div>
       </div>
 
       <div className="export-actions">

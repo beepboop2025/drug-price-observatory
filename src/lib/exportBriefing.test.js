@@ -65,6 +65,11 @@ describe('exportBriefing', () => {
       assert.ok(csv.includes('dominantOutflowCorridor'))
     })
 
+    it('includes rawSourceNameCount alongside sourceDiversity for source-independence audit', () => {
+      const csv = riskProfilesToCsv(briefing)
+      assert.ok(csv.includes('sourceDiversity,rawSourceNameCount'))
+    })
+
     it('quotes fields containing commas per RFC 4180', () => {
       const csv = riskProfilesToCsv(briefing)
       // "INCB, precursors report" flows into a source name referenced by the

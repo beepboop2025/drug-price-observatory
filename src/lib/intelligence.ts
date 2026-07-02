@@ -219,6 +219,14 @@ export interface RegionRiskProfile {
    * slightly different names across years/records.
    */
   sourceDiversity: number
+  /**
+   * Raw distinct `sourceName` string count for this region, before family
+   * collapsing. Exposed alongside `sourceDiversity` so analysts/audits can
+   * see when the independence discount actually changed the count (e.g.
+   * `rawSourceNameCount: 2, sourceDiversity: 1` flags a scraper/entry
+   * inconsistency worth cleaning up at the source, not just at fusion time).
+   */
+  rawSourceNameCount: number
   evidenceCount: number
   conflictPressure: number
   precursorPressure: number
@@ -289,6 +297,15 @@ export interface IntelligenceBriefing {
     staleRegions: number
     concentratedCorridorRegions: number
     concentratedOutflowCorridorRegions: number
+    /**
+     * Regions where `rawSourceNameCount` exceeds `sourceDiversity` — i.e.
+     * the fusion engine's source-family collapsing actually changed the
+     * count (see `canonicalSourceId`). A non-zero value flags upstream
+     * data-entry/scraper inconsistency (the same organisation entered under
+     * multiple name-string variants) worth cleaning up at the source,
+     * distinct from genuine multi-source corroboration.
+     */
+    duplicateSourceNameRegions: number
   }
 }
 
@@ -680,6 +697,7 @@ export function buildMyanmarIntelligenceBriefing(input: {
       riskScore: Math.round(riskScore),
       confidenceScore: Math.round(confidenceScore),
       sourceDiversity: regionSourceFamilies.size,
+      rawSourceNameCount: regionSources.size,
       evidenceCount,
       conflictPressure: Math.round(conflictPressure),
       precursorPressure: Math.round(precursorPressure),
@@ -749,6 +767,7 @@ export function buildMyanmarIntelligenceBriefing(input: {
   const staleRegions = profiles.filter((p) => p.evidenceStaleness === 'stale').length
   const concentratedCorridorRegions = profiles.filter((p) => p.precursorCorridorTier === 'concentrated').length
   const concentratedOutflowCorridorRegions = profiles.filter((p) => p.outflowCorridorTier === 'concentrated').length
+  const duplicateSourceNameRegions = profiles.filter((p) => p.rawSourceNameCount > p.sourceDiversity).length
 
   return {
     year,
@@ -766,6 +785,7 @@ export function buildMyanmarIntelligenceBriefing(input: {
       staleRegions,
       concentratedCorridorRegions,
       concentratedOutflowCorridorRegions,
+      duplicateSourceNameRegions,
     },
   }
 }

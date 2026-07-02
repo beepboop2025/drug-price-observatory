@@ -898,5 +898,57 @@ describe('buildMyanmarIntelligenceBriefing', () => {
       assert.equal(shan.sourceDiversity, 2)
       assert.equal(shan.verificationTier, 'multi-source')
     })
+
+    it('exposes rawSourceNameCount and flags duplicateSourceNameRegions when family-collapsing changed the count', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        regionRecords: [],
+        conflictEvents: [
+          {
+            region: 'shan_north', year: 2024, actor: 'Border militia', actorType: 'militia',
+            eventType: 'clash', intensity: 80, sourceName: 'UNODC Myanmar Opium Survey 2024',
+            sourceUrl: 'https://unodc.org/survey',
+          },
+        ],
+        precursorFlows: [
+          {
+            originCountry: 'China', transitCountry: null, to: 'shan_north', year: 2024,
+            precursor: 'meth_precursors', quantityKg: 4000, confidence: 'official',
+            sourceName: 'UNODC', sourceUrl: 'https://unodc.org/precursors',
+          },
+        ],
+        outflows: [],
+      })
+      const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+      const kachin = briefing.profiles.find((p) => p.region === 'kachin')
+      assert.equal(shan.rawSourceNameCount, 2)
+      assert.equal(shan.sourceDiversity, 1)
+      assert.equal(kachin.rawSourceNameCount, 0)
+      assert.equal(briefing.enterpriseReadiness.duplicateSourceNameRegions, 1)
+    })
+
+    it('does not flag duplicateSourceNameRegions when every source is a distinct family', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        regionRecords: [],
+        conflictEvents: [
+          {
+            region: 'shan_north', year: 2024, actor: 'Border militia', actorType: 'militia',
+            eventType: 'clash', intensity: 80, sourceName: 'ACLED', sourceUrl: 'https://acleddata.com',
+          },
+        ],
+        precursorFlows: [
+          {
+            originCountry: 'China', transitCountry: null, to: 'shan_north', year: 2024,
+            precursor: 'meth_precursors', quantityKg: 4000, confidence: 'official',
+            sourceName: 'UNODC', sourceUrl: 'https://unodc.org',
+          },
+        ],
+        outflows: [],
+      })
+      assert.equal(briefing.enterpriseReadiness.duplicateSourceNameRegions, 0)
+    })
   })
 })
