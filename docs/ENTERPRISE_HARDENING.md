@@ -17,6 +17,7 @@ intelligence workflow. The design is based on recent literature patterns:
 | Evidence recency / temporal-credibility decay | Staleness-aware evidence fusion (arXiv:2506.05780); temporal credibility decay in OSINT entity correlation | `src/lib/intelligence.ts` computes `mostRecentEvidenceYear`/`evidenceAgeYears`/`evidenceStaleness` (`current` / `aging` / `stale` / `no-data`) per region from the freshest record across all evidence types, and applies a confidence-score penalty once evidence is 1+ (aging) or 3+ (stale) report-years old, so uncorroborated old reporting doesn't carry current-year confidence. |
 | Supply-chain corridor-concentration risk | HHI concentration methodology (US DOJ/FTC Horizontal Merger Guidelines thresholds) applied to trafficking corridors instead of market share | `src/lib/intelligence.ts` computes an HHI (0-10000) for each region's *inbound* precursor-corridor sourcing and *outbound* seized-drug exit-corridor sourcing, tiering each `diversified` / `moderate` / `concentrated`. A region whose supply/export runs through one corridor is both more fragile and a sharper interdiction target than one with diversified routing. |
 | Source-independence discounting | Non-independence bias in multi-source/Dempster-Shafer evidence fusion; trust-weighted source reliability (arXiv:2401.02379) | `src/lib/sourceReliability.ts` adds `canonicalSourceId`, resolving free-text `sourceName`/`sourceUrl` variants of the *same* organisation (e.g. "UNODC" vs. "UNODC Myanmar Opium Survey 2024") to one stable source-identity family. `sourceDiversity`, `verificationTier`, the confidence score's source-count term, and the cross-source disagreement gate are all keyed on independent families rather than raw name strings, so name-string duplication of one source can no longer masquerade as multi-source corroboration. `rawSourceNameCount` and `enterpriseReadiness.duplicateSourceNameRegions` expose the raw-vs-family gap as an actionable upstream data-quality signal. |
+| Armed-actor network contagion | Bipartite armed-actor/territory network analysis of conflict diffusion (arXiv:2508.09051) | `src/lib/intelligence.ts` runs an `actorNetworkWatch` pass alongside geographic spillover: it groups `MM_CONFLICT_EVENTS` by shared `actor` name and flags a calm region as linked to a high-risk region when they share a conflict actor — even when the two regions aren't administratively adjacent (e.g. an armed group with an administered zone plus reported influence pockets elsewhere). A distinct early-warning path from `spilloverWatch`'s geographic-adjacency signal; never affects a region's own `riskScore`. |
 
 ## Enterprise Intel tab
 
@@ -58,6 +59,12 @@ The tab computes deterministic, explainable profiles per Myanmar region:
   whose administrative neighbor has crossed the high-risk threshold, using a
   public region-adjacency map — a distinct early-warning signal from the
   region's own `riskScore`, grounded in conflict spatial-diffusion research.
+- **Actor-network watch** flags a region whose own evidence is currently calm
+  but that shares a reported conflict actor with a high-risk region, even
+  when the two regions don't border each other — grounded in bipartite
+  armed-actor/territory network research (arXiv:2508.09051). Complements
+  spillover watch's purely geographic signal with a shared-combatant/
+  administered-zone signal; never affects the region's own `riskScore`.
 - **Evidence staleness** (`current` / `aging` / `stale` / `no-data`) tracks how
   old a region's freshest evidence is relative to the reporting year, applying
   a graduated confidence penalty so old, uncorroborated reporting doesn't

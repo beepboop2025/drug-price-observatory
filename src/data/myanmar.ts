@@ -163,6 +163,22 @@ export const MM_CONFLICT_EVENTS: MmConflictEventRecord[] = [
     sourceName: 'ACLED Myanmar event data',
     sourceUrl: 'https://acleddata.com/asia-pacific/myanmar/',
   },
+  // Same actor as the 'wa' record above, reported operating in a
+  // *non-adjacent* region (shan_south is not in MM_REGION_ADJACENCY.wa).
+  // Reflects publicly reported UWSA-administered/influence pockets in
+  // southern Shan (e.g. Mong Hsat/Mongton townships) alongside the Wa Self-
+  // Administered Division proper — a case geographic-adjacency spillover
+  // can't catch but a shared-actor network signal can.
+  {
+    region: 'shan_south',
+    year: 2022,
+    actor: 'United Wa State Army-administered area',
+    actorType: 'eao',
+    eventType: 'territorial_control',
+    intensity: 40,
+    sourceName: 'International Crisis Group',
+    sourceUrl: 'https://www.crisisgroup.org/asia/south-east-asia/myanmar',
+  },
 ]
 
 // Inbound precursor corridors feeding Myanmar production regions. These are

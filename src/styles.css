@@ -386,6 +386,15 @@ h3 { font-family: var(--font-display); font-weight: 400; font-size: 1.2rem; lett
   padding: 0.35rem 0.5rem;
   background: rgba(224, 195, 127, 0.08);
 }
+.actor-network-flag {
+  color: #d6a1e0;
+  font-size: 0.78rem;
+  margin: 0 0 0.65rem;
+  border: 1px solid rgba(214, 161, 224, 0.4);
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  background: rgba(214, 161, 224, 0.08);
+}
 .staleness-tag {
   font-size: 0.72rem;
   margin: 0 0 0.5rem;

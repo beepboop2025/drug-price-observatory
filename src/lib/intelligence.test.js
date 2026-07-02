@@ -481,6 +481,79 @@ describe('buildMyanmarIntelligenceBriefing', () => {
     })
   })
 
+  describe('actor-network watch', () => {
+    it('flags a calm region linked to a high-risk region via a shared conflict actor, even without adjacency', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        regionRecords: [
+          { region: 'shan_north', year: 2024, opiumHa: 20000, methIndex: 95 },
+          { region: 'kachin', year: 2024, opiumHa: 500, methIndex: 5 },
+        ],
+        conflictEvents: [
+          {
+            region: 'shan_north', year: 2024, actor: 'Shared Armed Group', actorType: 'eao',
+            eventType: 'clash', intensity: 90, sourceName: 'ACLED', sourceUrl: 'https://example.org/acled',
+          },
+          {
+            region: 'kachin', year: 2024, actor: 'Shared Armed Group', actorType: 'eao',
+            eventType: 'territorial_control', intensity: 20, sourceName: 'ICG', sourceUrl: 'https://example.org/icg',
+          },
+        ],
+        precursorFlows: [
+          {
+            originCountry: 'China', transitCountry: null, to: 'shan_north', year: 2024,
+            precursor: 'meth_precursors', quantityKg: 5000, confidence: 'official',
+            sourceName: 'INCB', sourceUrl: 'https://www.incb.org/incb/en/precursors/',
+          },
+        ],
+        outflows: [],
+        // Deliberately no regionAdjacency — the two regions are not modelled
+        // as bordering, so this can only be caught via the shared-actor link.
+      })
+
+      const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+      const kachin = briefing.profiles.find((p) => p.region === 'kachin')
+      assert.ok(shan.riskScore >= 70, 'shan_north should be high risk in this fixture')
+      assert.equal(shan.actorNetworkWatch, false, 'a region is never its own actor-network watch')
+      assert.equal(kachin.actorNetworkRiskScore, shan.riskScore)
+      assert.equal(kachin.actorNetworkRegion, 'shan_north')
+      assert.equal(kachin.actorNetworkActor, 'Shared Armed Group')
+      assert.equal(kachin.actorNetworkWatch, true)
+      assert.equal(briefing.enterpriseReadiness.actorNetworkWatchRegions, 1)
+    })
+
+    it('does not flag actor-network watch when regions share no conflict actor', () => {
+      const briefing = buildMyanmarIntelligenceBriefing({
+        year: 2024,
+        regions,
+        regionRecords: [
+          { region: 'shan_north', year: 2024, opiumHa: 20000, methIndex: 95 },
+          { region: 'kachin', year: 2024, opiumHa: 500, methIndex: 5 },
+        ],
+        conflictEvents: [
+          {
+            region: 'shan_north', year: 2024, actor: 'Group A', actorType: 'eao',
+            eventType: 'clash', intensity: 90, sourceName: 'ACLED', sourceUrl: 'https://example.org/acled',
+          },
+          {
+            region: 'kachin', year: 2024, actor: 'Group B', actorType: 'eao',
+            eventType: 'clash', intensity: 20, sourceName: 'ICG', sourceUrl: 'https://example.org/icg',
+          },
+        ],
+        precursorFlows: [],
+        outflows: [],
+      })
+
+      assert.ok(briefing.profiles.every((p) => !p.actorNetworkWatch))
+      assert.equal(briefing.enterpriseReadiness.actorNetworkWatchRegions, 0)
+      const kachin = briefing.profiles.find((p) => p.region === 'kachin')
+      assert.equal(kachin.actorNetworkRiskScore, 0)
+      assert.equal(kachin.actorNetworkRegion, null)
+      assert.equal(kachin.actorNetworkActor, null)
+    })
+  })
+
   describe('evidence staleness', () => {
     it('treats current-year evidence as current with no confidence penalty', () => {
       const briefing = buildMyanmarIntelligenceBriefing({

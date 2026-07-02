@@ -48,6 +48,14 @@ describe('exportBriefing', () => {
       assert.ok(csv.includes('trajectory'))
     })
 
+    it('includes actor-network watch fields for downstream audit', () => {
+      const csv = riskProfilesToCsv(briefing)
+      assert.ok(csv.includes('actorNetworkWatch'))
+      assert.ok(csv.includes('actorNetworkRegion'))
+      assert.ok(csv.includes('actorNetworkRiskScore'))
+      assert.ok(csv.includes('actorNetworkActor'))
+    })
+
     it('includes precursor-corridor concentration fields for downstream audit', () => {
       const csv = riskProfilesToCsv(briefing)
       assert.ok(csv.includes('precursorCorridorHHI'))

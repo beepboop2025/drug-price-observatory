@@ -204,6 +204,23 @@ function mostRecentEvidenceYear(
   return latest
 }
 
+/**
+ * Maps each region id to the set of conflict-actor names reported active in
+ * it. Used to find regions linked by a shared armed actor even when they
+ * don't border each other — per bipartite armed-actor/territory network
+ * research (arXiv:2508.09051), shared combatants/administered zones can
+ * transmit risk across non-adjacent ground that a purely geographic
+ * adjacency map would miss.
+ */
+function actorsByRegion(conflictEvents: MmConflictEventRecord[]): Map<string, Set<string>> {
+  const map = new Map<string, Set<string>>()
+  for (const event of conflictEvents) {
+    if (!map.has(event.region)) map.set(event.region, new Set())
+    map.get(event.region)!.add(event.actor)
+  }
+  return map
+}
+
 export interface RegionRiskProfile {
   region: string
   label: string
@@ -257,6 +274,25 @@ export interface RegionRiskProfile {
    * distinct from the region's own evidence-driven riskScore.
    */
   spilloverWatch: boolean
+  /**
+   * Highest riskScore among regions that share a conflict actor with this
+   * region (per `MM_CONFLICT_EVENTS.actor`), excluding this region itself.
+   * 0 when this region has no actor overlap with any other region.
+   */
+  actorNetworkRiskScore: number
+  /** The linked region id driving `actorNetworkRiskScore`; null when none. */
+  actorNetworkRegion: string | null
+  /** The shared actor name driving the `actorNetworkRegion` link; null when none. */
+  actorNetworkActor: string | null
+  /**
+   * True when this region's own risk score is not yet "high" but a region
+   * sharing one of its conflict actors is — a network-contagion signal
+   * distinct from `spilloverWatch` (geographic adjacency): armed-actor
+   * network studies find shared combatants/administered zones link risk
+   * across non-adjacent territory (bipartite actor-municipality network
+   * analysis, arXiv:2508.09051). Never affects the region's own riskScore.
+   */
+  actorNetworkWatch: boolean
   /** Most recent year (<= reporting year) with any evidence record for this region; null if none. */
   mostRecentEvidenceYear: number | null
   /** Years between `mostRecentEvidenceYear` and the reporting year; null when there's no evidence at all. */
@@ -297,6 +333,8 @@ export interface IntelligenceBriefing {
     staleRegions: number
     concentratedCorridorRegions: number
     concentratedOutflowCorridorRegions: number
+    /** Regions flagged via `actorNetworkWatch` (shared-actor network contagion, not geographic adjacency). */
+    actorNetworkWatchRegions: number
     /**
      * Regions where `rawSourceNameCount` exceeds `sourceDiversity` — i.e.
      * the fusion engine's source-family collapsing actually changed the
@@ -322,6 +360,11 @@ const SOURCE_CONFLICT_PENALTY = 15
 const SPILLOVER_HIGH_RISK_THRESHOLD = 70
 /** Minimum gap between a region's own score and its highest-risk neighbor to flag spillover watch. */
 const SPILLOVER_GAP_THRESHOLD = 15
+
+/** riskScore at/above this level counts as "high risk" for actor-network comparison. */
+const ACTOR_NETWORK_HIGH_RISK_THRESHOLD = 70
+/** Minimum gap between a region's own score and its highest-risk actor-linked region to flag actor-network watch. */
+const ACTOR_NETWORK_GAP_THRESHOLD = 15
 
 /**
  * Generic reliability-weighted disagreement check shared by precursor-flow
@@ -727,6 +770,10 @@ export function buildMyanmarIntelligenceBriefing(input: {
       neighborRiskScore: 0,
       neighborRegion: null as string | null,
       spilloverWatch: false,
+      actorNetworkRiskScore: 0,
+      actorNetworkRegion: null as string | null,
+      actorNetworkActor: null as string | null,
+      actorNetworkWatch: false,
     }
   })
 
@@ -758,6 +805,35 @@ export function buildMyanmarIntelligenceBriefing(input: {
       neighborRiskScore - profile.riskScore >= SPILLOVER_GAP_THRESHOLD
   }
 
+  // Actor-network pass: two regions can share risk exposure via a common
+  // armed actor even when they don't border each other (see `actorsByRegion`
+  // doc comment). This is a separate pass from geographic spillover above —
+  // it never affects a region's own riskScore, only an explicit watch flag.
+  const actorsForRegion = actorsByRegion(conflictEvents)
+  for (const profile of profiles) {
+    const myActors = actorsForRegion.get(profile.region) ?? new Set<string>()
+    let actorNetworkRiskScore = 0
+    let actorNetworkRegion: string | null = null
+    let actorNetworkActor: string | null = null
+    for (const other of profiles) {
+      if (other.region === profile.region) continue
+      const otherActors = actorsForRegion.get(other.region) ?? new Set<string>()
+      const sharedActor = [...myActors].find((actor) => otherActors.has(actor))
+      if (sharedActor && other.riskScore > actorNetworkRiskScore) {
+        actorNetworkRiskScore = other.riskScore
+        actorNetworkRegion = other.region
+        actorNetworkActor = sharedActor
+      }
+    }
+    profile.actorNetworkRiskScore = actorNetworkRiskScore
+    profile.actorNetworkRegion = actorNetworkRegion
+    profile.actorNetworkActor = actorNetworkActor
+    profile.actorNetworkWatch =
+      actorNetworkRiskScore >= ACTOR_NETWORK_HIGH_RISK_THRESHOLD &&
+      profile.riskScore < ACTOR_NETWORK_HIGH_RISK_THRESHOLD &&
+      actorNetworkRiskScore - profile.riskScore >= ACTOR_NETWORK_GAP_THRESHOLD
+  }
+
   profiles.sort((a, b) => b.riskScore - a.riskScore)
 
   const { nodes, edges } = buildEvidenceGraph({ regions, conflictEvents, precursorFlows, outflows, borderNodes: input.borderNodes })
@@ -768,6 +844,7 @@ export function buildMyanmarIntelligenceBriefing(input: {
   const concentratedCorridorRegions = profiles.filter((p) => p.precursorCorridorTier === 'concentrated').length
   const concentratedOutflowCorridorRegions = profiles.filter((p) => p.outflowCorridorTier === 'concentrated').length
   const duplicateSourceNameRegions = profiles.filter((p) => p.rawSourceNameCount > p.sourceDiversity).length
+  const actorNetworkWatchRegions = profiles.filter((p) => p.actorNetworkWatch).length
 
   return {
     year,
@@ -786,6 +863,7 @@ export function buildMyanmarIntelligenceBriefing(input: {
       concentratedCorridorRegions,
       concentratedOutflowCorridorRegions,
       duplicateSourceNameRegions,
+      actorNetworkWatchRegions,
     },
   }
 }

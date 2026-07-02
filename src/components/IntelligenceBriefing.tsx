@@ -142,6 +142,10 @@ export default function IntelligenceBriefing() {
           <span className="stat-label">Regions on spillover watch</span>
         </div>
         <div className="stat">
+          <span className="stat-value">{briefing.enterpriseReadiness.actorNetworkWatchRegions}</span>
+          <span className="stat-label">Regions on actor-network watch</span>
+        </div>
+        <div className="stat">
           <span className="stat-value">{briefing.enterpriseReadiness.staleRegions}</span>
           <span className="stat-label">Regions with stale evidence (3+ yrs)</span>
         </div>
@@ -216,6 +220,16 @@ export default function IntelligenceBriefing() {
                 })`}
               >
                 ⇄ Spillover watch: borders a high-risk region
+              </p>
+            )}
+            {profile.actorNetworkWatch && (
+              <p
+                className="actor-network-flag"
+                title={`Shared actor "${profile.actorNetworkActor}" also active in: ${
+                  briefing.profiles.find((p) => p.region === profile.actorNetworkRegion)?.label ?? profile.actorNetworkRegion
+                } (risk ${profile.actorNetworkRiskScore})`}
+              >
+                ☍ Actor-network watch: linked to a high-risk region via shared actor
               </p>
             )}
             <p
