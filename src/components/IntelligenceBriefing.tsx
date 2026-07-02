@@ -14,6 +14,23 @@ const reliabilityLabel = (weight: number): string => {
   return 'low'
 }
 
+const trajectoryIcon: Record<string, string> = {
+  rising: '▲',
+  falling: '▼',
+  stable: '▬',
+  'insufficient-data': '·',
+}
+
+const trajectoryLabel = (
+  trajectory: string,
+  changePct: number | null,
+  baselineYear: number | null,
+): string => {
+  if (trajectory === 'insufficient-data') return 'No prior-year data'
+  const pct = changePct !== null ? `${changePct >= 0 ? '+' : ''}${Math.round(changePct * 100)}%` : '—'
+  return `${pct} vs ${baselineYear}`
+}
+
 export default function IntelligenceBriefing() {
   const {
     mmRegions,
@@ -77,6 +94,10 @@ export default function IntelligenceBriefing() {
           <span className="stat-value">{briefing.enterpriseReadiness.conflictedRegions}</span>
           <span className="stat-label">Regions with cross-source conflicts</span>
         </div>
+        <div className="stat">
+          <span className="stat-value">{briefing.enterpriseReadiness.risingRegions}</span>
+          <span className="stat-label">Regions trending upward</span>
+        </div>
       </div>
 
       <div className="intel-grid">
@@ -98,6 +119,13 @@ export default function IntelligenceBriefing() {
               {profile.verificationTier === 'multi-source' && 'Multi-source verified'}
               {profile.verificationTier === 'single-source' && 'Single-source — unverified'}
               {profile.verificationTier === 'unverified' && 'No independent sourcing'}
+            </p>
+            <p
+              className={`trajectory-tag trend-${profile.trajectory}`}
+              title={trajectoryLabel(profile.trajectory, profile.trajectoryChangePct, profile.trajectoryBaselineYear)}
+            >
+              {trajectoryIcon[profile.trajectory]} {profile.trajectory === 'insufficient-data' ? 'No trend data' : profile.trajectory}
+              {' '}({trajectoryLabel(profile.trajectory, profile.trajectoryChangePct, profile.trajectoryBaselineYear)})
             </p>
             {profile.hasSourceConflict && (
               <p className="conflict-flag" title={profile.conflictNotes.join('; ')}>

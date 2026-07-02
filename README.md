@@ -23,7 +23,11 @@ top of that public data: clean charts, maps, and plain-English explanations.
 - **Flow Map** — an Equal-Earth world map of corridor arcs, animated over time.
 - **Myanmar Focus** — province-level (Golden Triangle) detail: production regions,
   civil-war conflict pressure, China/third-country precursor inflows, cross-border
-  corridor towns, and seized volumes.
+  corridor towns, and seized volumes. The intelligence layer fuses multi-source
+  evidence into per-region risk/confidence scores, flags cross-source
+  disagreement, weights sources by reliability tier, and computes a
+  year-over-year risk trajectory (rising/falling/stable) so analysts see
+  momentum, not just a static snapshot.
 
 Every view carries an auto-generated *"In plain English"* sentence and hover
 tooltips that explain each figure in human terms.

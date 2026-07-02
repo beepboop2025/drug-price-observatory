@@ -191,6 +191,89 @@ describe('buildMyanmarIntelligenceBriefing', () => {
     assert.equal(profile.verificationTier, 'multi-source')
   })
 
+  it('flags a rising trajectory when cultivation/synthetic/outflow pressure climbs vs. the nearest earlier year', () => {
+    const briefing = buildMyanmarIntelligenceBriefing({
+      year: 2024,
+      regions,
+      regionRecords: [
+        { region: 'shan_north', year: 2020, opiumHa: 10000, methIndex: 50 },
+        { region: 'shan_north', year: 2024, opiumHa: 16000, methIndex: 85 },
+        { region: 'kachin', year: 2020, opiumHa: 4000, methIndex: 30 },
+        { region: 'kachin', year: 2024, opiumHa: 4050, methIndex: 31 },
+      ],
+      conflictEvents: [],
+      precursorFlows: [],
+      outflows: [],
+    })
+
+    const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+    const kachin = briefing.profiles.find((p) => p.region === 'kachin')
+
+    assert.equal(shan.trajectory, 'rising')
+    assert.equal(shan.trajectoryBaselineYear, 2020)
+    assert.ok(shan.trajectoryChangePct > 0.15)
+    assert.equal(kachin.trajectory, 'stable')
+  })
+
+  it('flags a falling trajectory when pressure eases vs. the nearest earlier year', () => {
+    const briefing = buildMyanmarIntelligenceBriefing({
+      year: 2024,
+      regions,
+      regionRecords: [
+        { region: 'shan_north', year: 2020, opiumHa: 16000, methIndex: 85 },
+        { region: 'shan_north', year: 2024, opiumHa: 9000, methIndex: 40 },
+      ],
+      conflictEvents: [],
+      precursorFlows: [],
+      outflows: [],
+    })
+
+    const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+    assert.equal(shan.trajectory, 'falling')
+    assert.ok(shan.trajectoryChangePct < -0.15)
+  })
+
+  it('reports insufficient-data trajectory when no earlier year exists, and counts risingRegions in enterprise readiness', () => {
+    const briefing = buildMyanmarIntelligenceBriefing({
+      year: 2024,
+      regions,
+      regionRecords: [
+        { region: 'shan_north', year: 2024, opiumHa: 10000, methIndex: 90 },
+      ],
+      conflictEvents: [],
+      precursorFlows: [],
+      outflows: [],
+    })
+
+    const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+    const kachin = briefing.profiles.find((p) => p.region === 'kachin')
+    assert.equal(shan.trajectory, 'insufficient-data')
+    assert.equal(shan.trajectoryChangePct, null)
+    assert.equal(shan.trajectoryBaselineYear, null)
+    assert.equal(kachin.trajectory, 'insufficient-data')
+    assert.equal(briefing.enterpriseReadiness.risingRegions, 0)
+  })
+
+  it('uses outbound seizure quantity as part of the momentum index, not just cultivation/synthetic stats', () => {
+    const briefing = buildMyanmarIntelligenceBriefing({
+      year: 2024,
+      regions,
+      regionRecords: [
+        { region: 'shan_north', year: 2020, opiumHa: 10000, methIndex: 50 },
+        { region: 'shan_north', year: 2024, opiumHa: 10000, methIndex: 50 },
+      ],
+      conflictEvents: [],
+      precursorFlows: [],
+      outflows: [
+        { from: 'shan_north', to: 'muse', year: 2020, quantityKg: 500, drug: 'Methamphetamine' },
+        { from: 'shan_north', to: 'muse', year: 2024, quantityKg: 6000, drug: 'Methamphetamine' },
+      ],
+    })
+
+    const shan = briefing.profiles.find((p) => p.region === 'shan_north')
+    assert.equal(shan.trajectory, 'rising')
+  })
+
   it('exposes average source reliability per region for analyst triage', () => {
     const briefing = buildMyanmarIntelligenceBriefing({
       year: 2024,

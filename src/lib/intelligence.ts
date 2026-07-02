@@ -35,6 +35,19 @@ export type { ReliabilityTier }
  */
 export type VerificationTier = 'multi-source' | 'single-source' | 'unverified'
 
+/**
+ * Momentum signal: whether a region's underlying pressure (cultivation +
+ * synthetic-drug activity + outbound seizures) is climbing, easing, or flat
+ * relative to the nearest earlier year with data. A static point-in-time
+ * score can rank two regions equally while one is trending sharply upward —
+ * analysts prioritising review time need the trend, not just the level.
+ * 'insufficient-data' means no earlier year exists for comparison, which is
+ * itself a signal (not silently defaulted to "stable").
+ */
+export type RiskTrajectory = 'rising' | 'falling' | 'stable' | 'insufficient-data'
+
+const TRAJECTORY_RELATIVE_THRESHOLD = 0.15
+
 export interface RegionRiskProfile {
   region: string
   label: string
@@ -54,6 +67,12 @@ export interface RegionRiskProfile {
   conflictNotes: string[]
   /** Mean reliability weight (0-1) of the distinct sources reporting on this region. */
   avgSourceReliability: number
+  /** Year-over-year momentum of underlying pressure, vs. the nearest earlier data year. */
+  trajectory: RiskTrajectory
+  /** Relative change (e.g. 0.22 = +22%) driving `trajectory`; null when insufficient-data. */
+  trajectoryChangePct: number | null
+  /** Nearest earlier year used for the trajectory comparison; null when none exists. */
+  trajectoryBaselineYear: number | null
 }
 
 export interface IntelligenceBriefing {
@@ -67,6 +86,7 @@ export interface IntelligenceBriefing {
     highRiskRegions: number
     evidenceRecords: number
     conflictedRegions: number
+    risingRegions: number
   }
 }
 
@@ -122,6 +142,66 @@ function detectPrecursorConflicts(
   }
 
   return notesByRegion
+}
+
+/**
+ * Per-region, per-year momentum index combining cultivation, synthetic-drug
+ * activity, and outbound seized quantity. Deliberately additive on raw
+ * (non-normalized) magnitudes so the comparison is a straightforward
+ * "same yardstick, different year" — normalizing per-year would make the
+ * index incomparable across years since the max used for normalization
+ * would itself shift.
+ */
+function momentumIndex(
+  region: string,
+  year: number,
+  regionRecords: MmRegionRecord[],
+  outflows: MmFlowRecord[],
+): number {
+  const stat = regionRecords.find((r) => r.region === region && r.year === year)
+  const outflowTotal = outflows
+    .filter((f) => f.from === region && f.year === year)
+    .reduce((sum, f) => sum + f.quantityKg, 0)
+  return (stat?.opiumHa ?? 0) * 0.01 + (stat?.methIndex ?? 0) * 10 + outflowTotal * 0.1
+}
+
+/**
+ * Finds the trajectory of a region's momentum index vs. the nearest earlier
+ * year that has any data for that region, across the full (unfiltered by
+ * requested year) history — not just year-1, since annual public reporting
+ * frequently skips years.
+ */
+function computeTrajectory(
+  region: string,
+  year: number,
+  allRegionRecords: MmRegionRecord[],
+  allOutflows: MmFlowRecord[],
+): { trajectory: RiskTrajectory; changePct: number | null; baselineYear: number | null } {
+  const priorYears = new Set<number>()
+  allRegionRecords.filter((r) => r.region === region && r.year < year).forEach((r) => priorYears.add(r.year))
+  allOutflows.filter((f) => f.from === region && f.year < year).forEach((f) => priorYears.add(f.year))
+
+  if (priorYears.size === 0) {
+    return { trajectory: 'insufficient-data', changePct: null, baselineYear: null }
+  }
+
+  const baselineYear = Math.max(...priorYears)
+  const current = momentumIndex(region, year, allRegionRecords, allOutflows)
+  const baseline = momentumIndex(region, baselineYear, allRegionRecords, allOutflows)
+
+  if (baseline <= 0) {
+    return { trajectory: current > 0 ? 'rising' : 'insufficient-data', changePct: null, baselineYear }
+  }
+
+  const changePct = (current - baseline) / baseline
+  const trajectory: RiskTrajectory =
+    changePct > TRAJECTORY_RELATIVE_THRESHOLD
+      ? 'rising'
+      : changePct < -TRAJECTORY_RELATIVE_THRESHOLD
+        ? 'falling'
+        : 'stable'
+
+  return { trajectory, changePct: Math.round(changePct * 1000) / 1000, baselineYear }
 }
 
 const clamp = (value: number, min = 0, max = 100): number => Math.max(min, Math.min(max, value))
@@ -211,6 +291,13 @@ export function buildMyanmarIntelligenceBriefing(input: {
     const conflictNotes = conflictNotesByRegion.get(region.id) ?? []
     const hasSourceConflict = conflictNotes.length > 0
 
+    const { trajectory, changePct: trajectoryChangePct, baselineYear: trajectoryBaselineYear } = computeTrajectory(
+      region.id,
+      year,
+      input.regionRecords,
+      input.outflows,
+    )
+
     const confidenceScore = clamp(
       Math.min(100, evidenceCount * 16) * 0.45 +
       Math.min(100, regionSources.size * 34) * 0.35 * (0.5 + 0.5 * avgSourceReliability) +
@@ -250,6 +337,9 @@ export function buildMyanmarIntelligenceBriefing(input: {
       hasSourceConflict,
       conflictNotes,
       avgSourceReliability: Math.round(avgSourceReliability * 100) / 100,
+      trajectory,
+      trajectoryChangePct,
+      trajectoryBaselineYear,
     }
   }).sort((a, b) => b.riskScore - a.riskScore)
 
@@ -268,6 +358,7 @@ export function buildMyanmarIntelligenceBriefing(input: {
       highRiskRegions: profiles.filter((p) => p.riskScore >= 70).length,
       evidenceRecords: conflictEvents.length + precursorFlows.length + outflows.length + regionRecords.length,
       conflictedRegions,
+      risingRegions: profiles.filter((p) => p.trajectory === 'rising').length,
     },
   }
 }
