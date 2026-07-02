@@ -60,6 +60,7 @@ export const COUNTRY_CENTROIDS: Record<string, Centroid> = {
   'Australia': { lat: -25.3, lng: 133.8 },
   'Afghanistan': { lat: 33.9, lng: 67.7 },
   'Thailand': { lat: 15.9, lng: 100.9 },
+  'Laos': { lat: 19.9, lng: 102.5 },
   'Netherlands': { lat: 52.1, lng: 5.3 },
   'Germany': { lat: 51.2, lng: 10.4 },
 }

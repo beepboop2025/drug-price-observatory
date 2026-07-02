@@ -13,12 +13,14 @@ import HeroScene from './hero/HeroScene'
 
 const WorldMap = lazy(() => import('./components/WorldMap'))
 const MyanmarFocus = lazy(() => import('./components/MyanmarFocus'))
+const IntelligenceBriefing = lazy(() => import('./components/IntelligenceBriefing'))
 
 const TABS = [
   { id: 'prices', label: 'Street Prices' },
   { id: 'flows', label: 'Precursor Flows & Prices' },
   { id: 'map', label: 'Flow Map' },
   { id: 'myanmar', label: 'Myanmar Focus' },
+  { id: 'intel', label: 'Enterprise Intel' },
 ] as const
 
 /** Springs its contents in on mount — remounted per tab (key) for a crossfade. */
@@ -87,6 +89,7 @@ export default function App() {
             {tab === 'flows' && <Flows />}
             {tab === 'map' && <WorldMap />}
             {tab === 'myanmar' && <MyanmarFocus />}
+            {tab === 'intel' && <IntelligenceBriefing />}
           </TabPanel>
         </Suspense>
       </main>

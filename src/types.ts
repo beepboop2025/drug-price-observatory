@@ -17,6 +17,23 @@ export type PrecursorId =
 
 /** Drugs that appear in Myanmar cross-border flow records (normalised form). */
 export type MyanmarDrug = 'Methamphetamine' | 'Heroin'
+export type MyanmarConflictActorType =
+  | 'military'
+  | 'eao'
+  | 'militia'
+  | 'resistance'
+  | 'criminal'
+  | 'state'
+  | 'unknown'
+export type MyanmarConflictEventType =
+  | 'clash'
+  | 'airstrike'
+  | 'territorial_control'
+  | 'ceasefire'
+  | 'sanction'
+  | 'seizure'
+  | 'other'
+export type SourceConfidence = 'official' | 'reported' | 'estimated'
 
 export interface DrugMeta { id: Drug; label: string; unit: string }
 export interface PrecursorMeta { id: PrecursorId; label: string; endDrug: string; incbScheduled: boolean }
@@ -70,6 +87,30 @@ export interface MmFlowRecord {
   drug: MyanmarDrug
 }
 
+export interface MmConflictEventRecord {
+  region: string
+  year: number
+  actor: string
+  actorType: MyanmarConflictActorType
+  eventType: MyanmarConflictEventType
+  /** Relative 0-100 conflict-pressure indicator derived from public event reporting. */
+  intensity: number
+  sourceName: string
+  sourceUrl: string
+}
+
+export interface MmPrecursorFlowRecord {
+  originCountry: string
+  transitCountry: string | null
+  to: string
+  year: number
+  precursor: PrecursorId
+  quantityKg: number
+  sourceName: string
+  sourceUrl: string
+  confidence: SourceConfidence
+}
+
 // ---- ingest ----
 /** Every parser returns validated records plus per-row warnings. */
 export interface ParseResult<T> { records: T[]; warnings: string[] }
@@ -84,6 +125,8 @@ export interface DataState {
   mmBorderNodes: MmNode[]
   mmRegionRecords: MmRegionRecord[]
   mmFlowRecords: MmFlowRecord[]
+  mmConflictEvents: MmConflictEventRecord[]
+  mmPrecursorFlows: MmPrecursorFlowRecord[]
 }
 
 /** CSV strings keyed by dataset; any subset may be provided to loadData(). */
@@ -95,6 +138,8 @@ export interface LoadBundle {
   mmBorderNodes?: string
   mmRegionRecords?: string
   mmFlows?: string
+  mmConflictEvents?: string
+  mmPrecursorFlows?: string
 }
 
 export interface LoadReport {

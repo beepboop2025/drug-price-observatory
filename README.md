@@ -22,7 +22,8 @@ top of that public data: clean charts, maps, and plain-English explanations.
   prices, with source hubs (notably China) highlighted.
 - **Flow Map** — an Equal-Earth world map of corridor arcs, animated over time.
 - **Myanmar Focus** — province-level (Golden Triangle) detail: production regions,
-  cross-border corridor towns, and seized volumes.
+  civil-war conflict pressure, China/third-country precursor inflows, cross-border
+  corridor towns, and seized volumes.
 
 Every view carries an auto-generated *"In plain English"* sentence and hover
 tooltips that explain each figure in human terms.
@@ -70,10 +71,26 @@ presenting anything as factual:
 - INCB — Precursors annual report & PICS — https://www.incb.org/incb/en/precursors/
 - EUDA (EMCDDA) — price & purity — https://www.euda.europa.eu/data
 - World Bank — GDP per capita — https://data.worldbank.org
+- ACLED / International Crisis Group — Myanmar civil-war context
 
 Load real data through the **"Load official data (CSV)"** panel in the footer; each
 file is parsed by `src/lib/ingest.js` and bad rows are reported, not silently dropped.
 See `src/lib/ingest-config-reference.md` for the column mapping.
+
+Myanmar conflict and precursor-flow source triage can be prepared with the
+Palimpsest-style governed scraper:
+
+```bash
+npm run scrape:myanmar -- --out docs/sources/myanmar-observations.csv --pretty
+```
+
+That output is an analyst work queue with excerpts and content fingerprints, not
+direct app data; verify and code rows into the Myanmar civil-war / precursor CSV
+schemas before loading them.
+
+The new **Enterprise Intel** tab adds an event/entity evidence graph, regional
+risk scores, confidence/source-diversity indicators, and an evidence ledger for
+analyst review. See `docs/ENTERPRISE_HARDENING.md` for the paper-backed design.
 
 ## Tech
 
@@ -89,6 +106,7 @@ Runtime data store (`src/lib/dataStore.ts`) swaps sample → real data on load.
 ```bash
 npm install
 npm run dev        # local dev server
+npm run scrape:myanmar -- --pretty
 npm run build      # type-check (tsc) + production build → dist/
 npm run preview    # preview the build
 npm run typecheck  # tsc --noEmit

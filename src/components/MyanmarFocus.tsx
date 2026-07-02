@@ -1,14 +1,23 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { ComposableMap, Geographies, Geography, Line, Marker } from 'react-simple-maps'
 import topology from 'world-atlas/countries-110m.json'
+import { COUNTRY_CENTROIDS, PRECURSORS } from '../data/flows'
 import { useData } from '../lib/dataStore'
 import { explainMyanmar } from '../lib/explain'
 import Explainer from './Explainer'
 
 const widthScale = (qty: number, max: number): number => (max ? 1 + (qty / max) * 5 : 1)
+const fmtKg = (v: number): string => `${Number(v).toLocaleString()} kg`
 
 export default function MyanmarFocus() {
-  const { mmRegions, mmBorderNodes, mmRegionRecords, mmFlowRecords } = useData()
+  const {
+    mmRegions,
+    mmBorderNodes,
+    mmRegionRecords,
+    mmFlowRecords,
+    mmConflictEvents,
+    mmPrecursorFlows,
+  } = useData()
   const [yearIdx, setYearIdx] = useState(0)
   const [playing, setPlaying] = useState(false)
 
@@ -49,21 +58,40 @@ export default function MyanmarFocus() {
     () => mmFlowRecords.filter((r) => r.year === currentYear),
     [mmFlowRecords, currentYear],
   )
+  const conflictEvents = useMemo(
+    () => mmConflictEvents.filter((r) => r.year === currentYear),
+    [mmConflictEvents, currentYear],
+  )
+  const precursorFlows = useMemo(
+    () => mmPrecursorFlows.filter((r) => r.year === currentYear),
+    [mmPrecursorFlows, currentYear],
+  )
 
   // Stable scales across all years (honest comparison during playback).
   const maxHa = useMemo(() => Math.max(0, ...mmRegionRecords.map((r) => r.opiumHa)), [mmRegionRecords])
   const maxQty = useMemo(() => Math.max(0, ...mmFlowRecords.map((r) => r.quantityKg)), [mmFlowRecords])
+  const maxConflict = useMemo(() => Math.max(0, ...mmConflictEvents.map((r) => r.intensity)), [mmConflictEvents])
+  const maxPrecursorQty = useMemo(
+    () => Math.max(0, ...mmPrecursorFlows.map((r) => r.quantityKg)),
+    [mmPrecursorFlows],
+  )
 
   const haFor = (id: string): number => regionRows.find((r) => r.region === id)?.opiumHa ?? 0
   const methFor = (id: string): number => regionRows.find((r) => r.region === id)?.methIndex ?? 0
+  const conflictFor = (id: string): number =>
+    conflictEvents
+      .filter((r) => r.region === id)
+      .reduce((max, r) => Math.max(max, r.intensity), 0)
+  const precursorLabel = (id: string): string => PRECURSORS.find((p) => p.id === id)?.label ?? id
 
   return (
     <section>
       <p className="intro">
         Zooming from country → province. Circles are Myanmar production regions
         (sized by opium-poppy hectares; redder = higher synthetic-drug activity
-        index). Diamonds are named cross-border corridor towns; arcs show seized
-        volumes leaving toward China, Thailand, the Mekong, and NE India.
+        index). Rings show civil-war conflict pressure; dashed inbound arcs show
+        China and other source countries sending precursor classes toward Myanmar
+        regions, while solid arcs show seized drug volumes leaving border corridors.
       </p>
 
       <div className="timeline">
@@ -79,7 +107,9 @@ export default function MyanmarFocus() {
         <span className="year-label">{currentYear ?? '—'}</span>
       </div>
 
-      <Explainer text={explainMyanmar(regionRows, flows, currentYear, labelOf)} />
+      <Explainer
+        text={explainMyanmar(regionRows, flows, currentYear, labelOf, conflictEvents, precursorFlows)}
+      />
 
       <div className="map-card">
         <ComposableMap
@@ -115,7 +145,25 @@ export default function MyanmarFocus() {
                 stroke={rec.drug === 'Heroin' ? '#e0d36e' : '#ff7a59'}
                 strokeWidth={widthScale(rec.quantityKg, maxQty)}
                 strokeLinecap="round" opacity={0.8}
-                style={{ transition: 'stroke-width 0.6s ease' }}
+              />
+            )
+          })}
+
+          {/* Inbound precursor arcs: country centroid -> Myanmar region centroid */}
+          {precursorFlows.map((rec) => {
+            const origin = COUNTRY_CENTROIDS[rec.originCountry]
+            const to = coordOf(rec.to)
+            if (!origin || !to) return null
+            return (
+              <Line
+                key={`${rec.originCountry}->${rec.to}->${rec.precursor}`}
+                from={[origin.lng, origin.lat]}
+                to={to}
+                stroke={rec.originCountry === 'China' ? '#ffab98' : '#a1ecff'}
+                strokeWidth={widthScale(rec.quantityKg, maxPrecursorQty)}
+                strokeLinecap="round"
+                strokeDasharray="5 4"
+                opacity={0.62}
               />
             )
           })}
@@ -133,11 +181,16 @@ export default function MyanmarFocus() {
           {mmRegions.map((rg) => {
             const ha = haFor(rg.id)
             const meth = methFor(rg.id)
+            const conflict = conflictFor(rg.id)
             const r = 3 + (maxHa ? (ha / maxHa) * 12 : 0)
+            const ring = r + 3 + (maxConflict ? (conflict / maxConflict) * 6 : 0)
             const fill = `rgb(${110 + Math.round(meth * 1.45)}, ${120 - Math.round(meth * 0.5)}, 90)`
             return (
               <Marker key={rg.id} coordinates={[rg.lng, rg.lat]}>
-                <title>{`${rg.label} — ${ha.toLocaleString()} ha opium poppy, synthetic-drug activity ${meth}/100 (${currentYear ?? '—'})`}</title>
+                <title>{`${rg.label} — ${ha.toLocaleString()} ha opium poppy, synthetic-drug activity ${meth}/100, conflict pressure ${conflict}/100 (${currentYear ?? '—'})`}</title>
+                {conflict > 0 && (
+                  <circle r={ring} fill="none" stroke="#ffab98" strokeOpacity={0.45} strokeWidth={1.2} />
+                )}
                 <circle r={r} fill={fill} fillOpacity={0.85} stroke="#0a0f1a" strokeWidth={0.8} />
                 <text textAnchor="middle" y={-r - 3} className="map-label">{rg.label}</text>
               </Marker>
@@ -149,7 +202,12 @@ export default function MyanmarFocus() {
       <h3>Region detail — {currentYear ?? '—'}</h3>
       <table className="data-table">
         <thead>
-          <tr><th>Region</th><th>Opium poppy (ha)</th><th>Synthetic-drug activity index</th></tr>
+          <tr>
+            <th>Region</th>
+            <th>Opium poppy (ha)</th>
+            <th>Synthetic-drug activity index</th>
+            <th>Conflict pressure</th>
+          </tr>
         </thead>
         <tbody>
           {mmRegions.map((rg) => (
@@ -157,6 +215,46 @@ export default function MyanmarFocus() {
               <td className={rg.id.startsWith('shan') || rg.id === 'wa' ? 'hot' : ''}>{rg.label}</td>
               <td>{haFor(rg.id).toLocaleString()} ha</td>
               <td>{methFor(rg.id)} / 100</td>
+              <td>{conflictFor(rg.id)} / 100</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h3>Civil-war overlay — {currentYear ?? '—'}</h3>
+      <table className="data-table">
+        <thead>
+          <tr><th>Region</th><th>Actor / party</th><th>Type</th><th>Event</th><th>Pressure</th><th>Source</th></tr>
+        </thead>
+        <tbody>
+          {conflictEvents.map((r, i) => (
+            <tr key={`${r.region}-${r.actor}-${i}`}>
+              <td>{labelOf(r.region)}</td>
+              <td className={r.actorType === 'military' || r.actorType === 'militia' ? 'hot' : ''}>{r.actor}</td>
+              <td>{r.actorType}</td>
+              <td>{r.eventType.replace(/_/g, ' ')}</td>
+              <td>{r.intensity} / 100</td>
+              <td><a href={r.sourceUrl} target="_blank" rel="noreferrer">{r.sourceName}</a></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h3>Inbound precursor flows to Myanmar — {currentYear ?? '—'}</h3>
+      <table className="data-table">
+        <thead>
+          <tr><th>Origin</th><th>Transit</th><th>To region</th><th>Precursor class</th><th>Reported volume</th><th>Confidence</th><th>Source</th></tr>
+        </thead>
+        <tbody>
+          {precursorFlows.map((r, i) => (
+            <tr key={`${r.originCountry}-${r.to}-${r.precursor}-${i}`}>
+              <td className={r.originCountry === 'China' ? 'hot' : ''}>{r.originCountry}</td>
+              <td>{r.transitCountry ?? '—'}</td>
+              <td>{labelOf(r.to)}</td>
+              <td>{precursorLabel(r.precursor)}</td>
+              <td>{fmtKg(r.quantityKg)}</td>
+              <td>{r.confidence}</td>
+              <td><a href={r.sourceUrl} target="_blank" rel="noreferrer">{r.sourceName}</a></td>
             </tr>
           ))}
         </tbody>
@@ -164,8 +262,9 @@ export default function MyanmarFocus() {
 
       <p className="note">
         Region grain matches the UNODC Myanmar Opium Survey (cultivation by
-        township/region) — published, aggregate, non-navigable. The activity index
-        is a relative indicator, not a production volume.
+        township/region) — published, aggregate, non-navigable. Activity and
+        conflict indexes are relative indicators, not production volumes or live
+        tactical reporting.
       </p>
     </section>
   )
