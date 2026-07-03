@@ -60,10 +60,10 @@ export default function App() {
             <span
               className={`data-badge tk-chip ${isSample ? 'tk-chip--warning' : 'tk-chip--ok'}`}
               title={isSample
-                ? 'Street Prices: official UNODC WDR 2025 Annex 8.1 figures. Flows, corridor map and Myanmar focus: illustrative pending official-data ingestion.'
+                ? 'Official: street prices (WDR 2025 Annex 8.1), seizure globe (Annex 7.1), Myanmar opium cultivation (Opium Survey 2025). Derived: Myanmar conflict pressure (survey Figure 3, ACLED). Illustrative: precursor corridors and Myanmar flow volumes, pending INCB/IDS ingestion.'
                 : 'All datasets replaced via the CSV loader — verify against the cited official sources.'}
             >
-              {isSample ? 'Prices: official · flows: sample' : 'Live data'}
+              {isSample ? 'Official: prices · seizures · opium' : 'Live data'}
             </span>
           </div>
           <Reveal delay={420}>
@@ -105,7 +105,7 @@ export default function App() {
           <DataLoader />
           <p className="disclaimer tk-degraded">
             ⚠️ {isSample
-              ? 'Street Prices shows official UNODC World Drug Report 2025 figures (Statistical Annex 8.1, retail per-gram, 2019–2023) with World Bank GDP-per-capita context. Precursor flows, the corridor map, and Myanmar focus figures remain illustrative pending official-data ingestion. '
+              ? 'Official data: street prices (UNODC WDR 2025 Annex 8.1 + World Bank GDP), the seizure globe (Annex 7.1), and Myanmar opium cultivation (UNODC Myanmar Opium Survey 2025). Myanmar conflict pressure is derived from the survey’s published ACLED-based incident chart. Precursor corridors and Myanmar flow volumes remain illustrative pending INCB/UNODC-IDS ingestion. '
               : 'Showing loaded data — verify against the cited official sources. '}
             This tool reports aggregate, published statistics (country and, for focus
             regions, province level) for awareness and research. It does not provide

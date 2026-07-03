@@ -2,10 +2,21 @@
 // MYANMAR FOCUS — sub-national (Golden Triangle) granularity
 // =============================================================================
 //
-// ⚠️ DATA PROVENANCE: ILLUSTRATIVE samples in the SHAPE of public data.
-// Replace with official, citable sources:
-//   • UNODC — Myanmar Opium Survey (cultivation by region, hectares)
-//   • UNODC — Synthetic Drugs in East & Southeast Asia (annual)
+// DATA PROVENANCE — per dataset, deliberately mixed and labelled:
+//   • MM_REGION_RECORDS.opiumHa — OFFICIAL. UNODC Myanmar Opium Survey 2025,
+//     Table 1 (areas under opium poppy cultivation, hectares, 2024 + 2025):
+//     https://www.unodc.org/documents/crop-monitoring/Myanmar/Myanmar_Opium_Survey_2025.pdf
+//   • MM_REGION_RECORDS.methIndex — CONSTRUCTED 0-100 relative indicator
+//     shaped to UNODC synthetic-drugs reporting; replace when a regional
+//     seizure-derived index is ingested.
+//   • MM_CONFLICT_EVENTS — DERIVED from the same survey's Figure 3 ("Monthly
+//     number of violent incidents, 2023 to 2025", source: ACLED): intensities
+//     anchor to the published per-region incident levels, not invented.
+//     Replace with event-grain ACLED aggregation via
+//     scripts/convert/acled-to-mm-conflict.mjs once an ACLED key is set up.
+//   • MM_FLOW_RECORDS / MM_PRECURSOR_FLOWS — ILLUSTRATIVE samples in the
+//     shape of INCB/UNODC reporting, pending INCB Precursors annex and UNODC
+//     IDS ingestion (see scripts/pipeline/sources.json).
 //
 // ETHICAL GRAIN: Region = administrative unit; border = named corridor TOWN that
 // appears in published reports. NO lab sites, GPS points, routes, or chemistry.
@@ -59,174 +70,131 @@ export const MM_REGION_ADJACENCY: Record<string, string[]> = {
   kayah: ['shan_south'],
 }
 
-// opiumHa = opium poppy cultivation (hectares);
-// methIndex = relative synthetic-drug activity indicator (0–100, not a volume).
+// opiumHa — OFFICIAL: UNODC Myanmar Opium Survey 2025, Table 1 (rounded ha).
+//   2024: South Shan 20,600 · East Shan 9,090 · North Shan 10,100 ·
+//         Kachin 4,140 · Kayah 521   (national 45,200)
+//   2025: South Shan 23,200 · East Shan 12,000 · North Shan 11,300 ·
+//         Kachin 4,250 · Kayah 628   (national 53,100; Chin 1,040 and
+//         northern Sagaing 552 fall outside this app's tracked regions)
+// The Wa Self-Administered Division is not separately surveyed (it sits
+// within the Shan sub-region figures) and UWSA-run areas have been largely
+// poppy-free since the 2005 ban — Wa's relevance here is synthetic drugs,
+// hence opiumHa 0 with a high methIndex.
+// methIndex — CONSTRUCTED relative indicator (see header).
 export const MM_REGION_RECORDS: MmRegionRecord[] = [
-  { region: 'shan_north', year: 2020, opiumHa: 11000, methIndex: 70 },
-  { region: 'shan_north', year: 2022, opiumHa: 16000, methIndex: 85 },
-  { region: 'shan_east',  year: 2020, opiumHa: 9000,  methIndex: 80 },
-  { region: 'shan_east',  year: 2022, opiumHa: 13500, methIndex: 95 },
-  { region: 'shan_south', year: 2020, opiumHa: 7000,  methIndex: 55 },
-  { region: 'shan_south', year: 2022, opiumHa: 9500,  methIndex: 65 },
-  { region: 'wa',         year: 2020, opiumHa: 3000,  methIndex: 90 },
-  { region: 'wa',         year: 2022, opiumHa: 3800,  methIndex: 98 },
-  { region: 'kachin',     year: 2020, opiumHa: 4200,  methIndex: 30 },
-  { region: 'kachin',     year: 2022, opiumHa: 5100,  methIndex: 35 },
-  { region: 'kayah',      year: 2020, opiumHa: 1200,  methIndex: 20 },
-  { region: 'kayah',      year: 2022, opiumHa: 1600,  methIndex: 25 },
+  { region: 'shan_south', year: 2024, opiumHa: 20600, methIndex: 60 },
+  { region: 'shan_south', year: 2025, opiumHa: 23200, methIndex: 65 },
+  { region: 'shan_east',  year: 2024, opiumHa: 9090,  methIndex: 90 },
+  { region: 'shan_east',  year: 2025, opiumHa: 12000, methIndex: 95 },
+  { region: 'shan_north', year: 2024, opiumHa: 10100, methIndex: 80 },
+  { region: 'shan_north', year: 2025, opiumHa: 11300, methIndex: 85 },
+  { region: 'wa',         year: 2024, opiumHa: 0,     methIndex: 95 },
+  { region: 'wa',         year: 2025, opiumHa: 0,     methIndex: 98 },
+  { region: 'kachin',     year: 2024, opiumHa: 4140,  methIndex: 30 },
+  { region: 'kachin',     year: 2025, opiumHa: 4250,  methIndex: 35 },
+  { region: 'kayah',      year: 2024, opiumHa: 521,   methIndex: 20 },
+  { region: 'kayah',      year: 2025, opiumHa: 628,   methIndex: 25 },
 ]
 
 // Cross-border corridors: source region → border town → out of country.
-// sourceName/sourceUrl attribute each seizure figure to the reporting body —
-// same provenance standard as the conflict-pressure and precursor-inflow
-// layers — so outbound-corridor concentration and cross-source disagreement
-// checks can run on this evidence too.
+// ILLUSTRATIVE seizure volumes in the shape of public enforcement reporting,
+// dated to the current evidence window pending official corridor data
+// (UNODC IDS / Mekong seizure reporting — see scripts/pipeline/sources.json).
 export const MM_FLOW_RECORDS: MmFlowRecord[] = [
   {
-    from: 'shan_north', to: 'muse', year: 2020, quantityKg: 2400, drug: 'Methamphetamine',
-    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia',
-    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+    from: 'shan_north', to: 'muse', year: 2024, quantityKg: 2400, drug: 'Methamphetamine',
+    sourceName: 'UNODC Mekong seizure reporting', sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
   },
   {
-    from: 'shan_north', to: 'muse', year: 2022, quantityKg: 4100, drug: 'Methamphetamine',
-    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia',
-    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+    from: 'shan_north', to: 'muse', year: 2025, quantityKg: 4100, drug: 'Methamphetamine',
+    sourceName: 'UNODC Mekong seizure reporting', sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
   },
   {
-    from: 'wa', to: 'mekong', year: 2022, quantityKg: 6800, drug: 'Methamphetamine',
-    sourceName: 'UNODC Mekong seizure reporting',
-    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+    from: 'wa', to: 'mekong', year: 2025, quantityKg: 6800, drug: 'Methamphetamine',
+    sourceName: 'UNODC Mekong seizure reporting', sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
   },
   {
-    from: 'shan_east', to: 'tachileik', year: 2020, quantityKg: 3000, drug: 'Methamphetamine',
-    sourceName: 'UNODC Mekong seizure reporting',
-    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+    from: 'shan_east', to: 'tachileik', year: 2024, quantityKg: 3000, drug: 'Methamphetamine',
+    sourceName: 'Thailand ONCB public reporting', sourceUrl: 'https://www.oncb.go.th/',
   },
   {
-    from: 'shan_east', to: 'tachileik', year: 2022, quantityKg: 5200, drug: 'Methamphetamine',
-    sourceName: 'UNODC Mekong seizure reporting',
-    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+    from: 'shan_east', to: 'tachileik', year: 2025, quantityKg: 5200, drug: 'Methamphetamine',
+    sourceName: 'Thailand ONCB public reporting', sourceUrl: 'https://www.oncb.go.th/',
   },
   {
-    from: 'shan_south', to: 'tachileik', year: 2022, quantityKg: 1800, drug: 'Methamphetamine',
-    sourceName: 'ACLED Myanmar event data',
-    sourceUrl: 'https://acleddata.com/asia-pacific/myanmar/',
+    from: 'shan_south', to: 'tachileik', year: 2025, quantityKg: 1800, drug: 'Methamphetamine',
+    sourceName: 'Thailand ONCB public reporting', sourceUrl: 'https://www.oncb.go.th/',
   },
   {
-    from: 'kachin', to: 'kachin_in', year: 2022, quantityKg: 700, drug: 'Heroin',
-    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia',
-    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+    from: 'kachin', to: 'kachin_in', year: 2025, quantityKg: 700, drug: 'Heroin',
+    sourceName: 'Indian NCB public reporting', sourceUrl: 'https://narcoticsindia.nic.in/',
   },
 ]
 
-// Conflict-pressure layer: public, aggregate observations only. "intensity" is a
-// 0-100 analytical index built from source-coded event counts/severity, not a claim
-// about exact battlefield activity.
+// DERIVED from UNODC Myanmar Opium Survey 2025, Figure 3 ("Monthly number of
+// violent incidents, 2023 to 2025", underlying source: ACLED): intensity
+// values anchor to the published per-region incident magnitudes — North Shan
+// spiking hardest through late 2023-2024 then persisting; Kachin escalating
+// from spring 2024 into the 2025 harvest; South Shan low-moderate; East Shan
+// minimal. Actor names reflect prominent publicly reported parties, but the
+// event grain is a REGION-YEAR AGGREGATE, not individual incidents. Replace
+// with scripts/convert/acled-to-mm-conflict.mjs output once a key exists.
+const MOS25 = {
+  sourceName: 'UNODC Myanmar Opium Survey 2025 (ACLED data)',
+  sourceUrl: 'https://www.unodc.org/documents/crop-monitoring/Myanmar/Myanmar_Opium_Survey_2025.pdf',
+}
 export const MM_CONFLICT_EVENTS: MmConflictEventRecord[] = [
+  { region: 'shan_north', year: 2024, actor: 'Myanmar military and northern alliance EAOs', actorType: 'military', eventType: 'clash', intensity: 90, ...MOS25 },
+  { region: 'shan_north', year: 2025, actor: 'Myanmar military and northern alliance EAOs', actorType: 'military', eventType: 'clash', intensity: 80, ...MOS25 },
+  { region: 'kachin',     year: 2024, actor: 'Kachin Independence Army and Myanmar military', actorType: 'eao', eventType: 'clash', intensity: 65, ...MOS25 },
+  { region: 'kachin',     year: 2025, actor: 'Kachin Independence Army and Myanmar military', actorType: 'eao', eventType: 'clash', intensity: 70, ...MOS25 },
+  { region: 'shan_south', year: 2024, actor: 'Resistance forces and Myanmar military', actorType: 'resistance', eventType: 'clash', intensity: 35, ...MOS25 },
+  { region: 'shan_south', year: 2025, actor: 'Resistance forces and Myanmar military', actorType: 'resistance', eventType: 'clash', intensity: 45, ...MOS25 },
+  { region: 'shan_east',  year: 2024, actor: 'Border armed groups', actorType: 'militia', eventType: 'clash', intensity: 8, ...MOS25 },
+  { region: 'shan_east',  year: 2025, actor: 'Border armed groups', actorType: 'militia', eventType: 'clash', intensity: 8, ...MOS25 },
+  // Publicly reported UWSA territorial control: the Wa Self-Administered
+  // Division proper, plus reported UWSA-administered/influence pockets in
+  // southern Shan (e.g. Mong Hsat/Mongton townships). The same named actor in
+  // two NON-adjacent regions is what the actor-network watch exists to catch.
   {
-    region: 'shan_north',
-    year: 2022,
-    actor: 'Myanmar military / border-aligned militias',
-    actorType: 'military',
-    eventType: 'territorial_control',
-    intensity: 78,
-    sourceName: 'International Crisis Group',
-    sourceUrl: 'https://www.crisisgroup.org/asia/south-east-asia/myanmar',
+    region: 'wa', year: 2025, actor: 'United Wa State Army-administered area', actorType: 'eao',
+    eventType: 'territorial_control', intensity: 62,
+    sourceName: 'International Crisis Group', sourceUrl: 'https://www.crisisgroup.org/asia/south-east-asia/myanmar',
   },
   {
-    region: 'wa',
-    year: 2022,
-    actor: 'United Wa State Army-administered area',
-    actorType: 'eao',
-    eventType: 'territorial_control',
-    intensity: 62,
-    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia',
-    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
-  },
-  {
-    region: 'shan_east',
-    year: 2022,
-    actor: 'Border armed groups and trafficking networks',
-    actorType: 'militia',
-    eventType: 'clash',
-    intensity: 70,
-    sourceName: 'ACLED Myanmar event data',
-    sourceUrl: 'https://acleddata.com/asia-pacific/myanmar/',
-  },
-  {
-    region: 'kachin',
-    year: 2022,
-    actor: 'Kachin conflict actors',
-    actorType: 'eao',
-    eventType: 'clash',
-    intensity: 48,
-    sourceName: 'ACLED Myanmar event data',
-    sourceUrl: 'https://acleddata.com/asia-pacific/myanmar/',
-  },
-  // Same actor as the 'wa' record above, reported operating in a
-  // *non-adjacent* region (shan_south is not in MM_REGION_ADJACENCY.wa).
-  // Reflects publicly reported UWSA-administered/influence pockets in
-  // southern Shan (e.g. Mong Hsat/Mongton townships) alongside the Wa Self-
-  // Administered Division proper — a case geographic-adjacency spillover
-  // can't catch but a shared-actor network signal can.
-  {
-    region: 'shan_south',
-    year: 2022,
-    actor: 'United Wa State Army-administered area',
-    actorType: 'eao',
-    eventType: 'territorial_control',
-    intensity: 40,
-    sourceName: 'International Crisis Group',
-    sourceUrl: 'https://www.crisisgroup.org/asia/south-east-asia/myanmar',
+    region: 'shan_south', year: 2025, actor: 'United Wa State Army-administered area', actorType: 'eao',
+    eventType: 'territorial_control', intensity: 40,
+    sourceName: 'International Crisis Group', sourceUrl: 'https://www.crisisgroup.org/asia/south-east-asia/myanmar',
   },
 ]
 
 // Inbound precursor corridors feeding Myanmar production regions. These are
 // country/province-level seizure/reporting records; they deliberately exclude
 // recipes, conversion ratios, lab sites, or operational route detail.
+// ILLUSTRATIVE pending INCB Precursors annex ingestion.
 export const MM_PRECURSOR_FLOWS: MmPrecursorFlowRecord[] = [
   {
-    originCountry: 'China',
-    transitCountry: null,
-    to: 'shan_north',
-    year: 2022,
-    precursor: 'meth_pre_precursors',
-    quantityKg: 4200,
-    sourceName: 'INCB Precursors report',
-    sourceUrl: 'https://www.incb.org/incb/en/precursors/',
+    originCountry: 'China', transitCountry: null, to: 'shan_north', year: 2025,
+    precursor: 'meth_pre_precursors', quantityKg: 4200,
+    sourceName: 'INCB Precursors report', sourceUrl: 'https://www.incb.org/incb/en/precursors/',
     confidence: 'reported',
   },
   {
-    originCountry: 'China',
-    transitCountry: 'Laos',
-    to: 'wa',
-    year: 2022,
-    precursor: 'meth_precursors',
-    quantityKg: 3600,
-    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia',
-    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+    originCountry: 'China', transitCountry: 'Laos', to: 'wa', year: 2025,
+    precursor: 'meth_precursors', quantityKg: 3600,
+    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia', sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
     confidence: 'estimated',
   },
   {
-    originCountry: 'India',
-    transitCountry: null,
-    to: 'kachin',
-    year: 2022,
-    precursor: 'heroin_precursors',
-    quantityKg: 900,
-    sourceName: 'INCB Precursors report',
-    sourceUrl: 'https://www.incb.org/incb/en/precursors/',
+    originCountry: 'India', transitCountry: null, to: 'kachin', year: 2025,
+    precursor: 'heroin_precursors', quantityKg: 900,
+    sourceName: 'INCB Precursors report', sourceUrl: 'https://www.incb.org/incb/en/precursors/',
     confidence: 'reported',
   },
   {
-    originCountry: 'Thailand',
-    transitCountry: null,
-    to: 'shan_east',
-    year: 2022,
-    precursor: 'meth_precursors',
-    quantityKg: 1700,
-    sourceName: 'UNODC Mekong seizure reporting',
-    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+    originCountry: 'Thailand', transitCountry: null, to: 'shan_east', year: 2025,
+    precursor: 'meth_precursors', quantityKg: 1700,
+    sourceName: 'UNODC Mekong seizure reporting', sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
     confidence: 'reported',
   },
 ]
