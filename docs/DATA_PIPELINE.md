@@ -73,13 +73,19 @@ Attribution "Data: ACLED" is a licence condition — keep it in SOURCES.
   `npx mapshaper ne10_ind.shp -simplify visvalingam 3% keep-shapes -filter-fields ADM0_A3,NAME -rename-fields name=NAME -rename-layers countries -o format=topojson quantization=100000 id-field=ADM0_A3 src/data/countries-ind.json`
   and re-run `gen-country-geo.mjs`.
 
-## Registration-gated (the big unlock)
+## IDS evaluated — corridors still open (2026-07-03 findings)
 
-**UNODC Individual Drug Seizures (dmp.unodc.org)** — per-seizure origin,
-transit and destination. This is the dataset that turns the illustrative
-corridor arcs into official ones. Request export access; when granted,
-aggregate to corridor + year grain before bundling (the ethical grain guard
-in `ingest.ts` stays the boundary: no event-level or navigable detail ships).
+**UNODC Individual Drug Seizures** turned out to be publicly downloadable
+(dmp.unodc.org/downloadIDS, xlsx by period, no registration), but the public
+extract carries **no origin/destination fields**, and Myanmar's reporting
+collapsed post-coup (437 events in 2018, zero in 2020-21, nine in 2024). It
+cannot ground the Myanmar corridor arcs. Remaining corridor paths, in order
+of practicality:
+1. **INCB Precursors annual report** annex tables (shipment/seizure
+   corridors at country grain) — extract with `from-pdf.mjs`.
+2. **UNODC Synthetic Drugs in East & Southeast Asia** seizure tables.
+3. **Higher-tier DMP access** — dmp.unodc.org User Registration (account
+   required; route dashboards are tier-gated for law enforcement/research).
 
 ## Ethical grain guard (unchanged, non-negotiable)
 

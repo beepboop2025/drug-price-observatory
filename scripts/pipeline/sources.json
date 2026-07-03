@@ -124,14 +124,14 @@
     },
     {
       "id": "unodc-ids",
-      "name": "UNODC Individual Drug Seizures (IDS) microdata — origin/destination per seizure",
-      "url": "https://dmp.unodc.org/",
-      "format": "portal export",
-      "cadence": "continuous",
-      "license": "UN; registration required for microdata exports",
-      "automation": "manual",
-      "feeds": "THE upgrade path for real corridor arcs (origin -> transit -> destination at event grain)",
-      "transform": "TODO once export access is granted — aggregate to corridor/year before bundling (ethical grain guard)"
+      "name": "UNODC Individual Drug Seizures (IDS) — public event-level exports",
+      "url": "https://dmp.unodc.org/downloadIDS",
+      "format": "xlsx (Export: 2011-2017 / 2018-2023 / 2024; no registration needed)",
+      "cadence": "periodic (file names carry the release month)",
+      "license": "UN open data, attribution",
+      "automation": "auto",
+      "feeds": "EVALUATED 2026-07-03: public extract has seizure place/drug/quantity/transport-mode but NO origin/destination fields, and Myanmar reporting collapsed post-coup (437 events 2018 -> 0 in 2020-21 -> 9 in 2024) — cannot ground Myanmar corridors. Corridor paths that remain: INCB Precursors annex tables, UNODC Synthetic Drugs SEA report, or higher-tier DMP access (dmp.unodc.org User Registration — needs an account, route dashboards are tier-gated).",
+      "transform": "none yet — revisit if corridor fields appear in public exports or higher-tier access is granted"
     },
     {
       "id": "ocindex",
