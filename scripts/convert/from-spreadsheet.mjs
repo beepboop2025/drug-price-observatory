@@ -3,7 +3,7 @@
  * from-spreadsheet.mjs
  *
  * Convert a source spreadsheet (CSV, .xlsx, or .xls) into one of the fixed CSV
- * schemas expected by the drug-price-observatory loader.
+ * schemas expected by the narcoscope loader.
  *
  * CLI:
  *   node from-spreadsheet.mjs <schema> <input-file> <output-file>

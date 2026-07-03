@@ -1,5 +1,5 @@
 {
-  "comment": "Open-data source registry for the Drug Price Observatory pipeline. automation: 'auto' = fetched and transformed by run.mjs with no credentials; 'api-key' = automatable once a free key is configured; 'manual' = one download or copy step per release cycle, then the listed converter handles it.",
+  "comment": "Open-data source registry for the NarcoScope pipeline. automation: 'auto' = fetched and transformed by run.mjs with no credentials; 'api-key' = automatable once a free key is configured; 'manual' = one download or copy step per release cycle, then the listed converter handles it.",
   "sources": [
     {
       "id": "wdr-prices",

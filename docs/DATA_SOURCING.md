@@ -194,7 +194,7 @@ Paste into Kimi Code (or any coding model). It pulls GDP only from a CSV you
 provide and is forbidden from inventing any drug-trade figures:
 
 ```
-Inside the repo "drug-price-observatory", create a one-off Node ESM script
+Inside the repo "narcoscope", create a one-off Node ESM script
 scripts/enrich-countries.mjs (no new npm deps; use only node builtins). Purpose:
 help extend the two hand-maintained config tables for a given list of countries.
 

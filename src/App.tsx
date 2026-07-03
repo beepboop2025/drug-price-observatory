@@ -50,8 +50,8 @@ export default function App() {
             <div className="titles">
               <SpringText
                 as="h1"
-                text="Global Drug Price Observatory"
-                inkWords={['Observatory']}
+                text="NarcoScope"
+                inkWords={['NarcoScope']}
                 trigger="mount"
                 stagger={26}
               />

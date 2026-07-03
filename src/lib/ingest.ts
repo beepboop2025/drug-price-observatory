@@ -1,5 +1,5 @@
 /**
- * Data ingestion module for drug-price-observatory.
+ * Data ingestion module for narcoscope.
  *
  * Parses official CSV exports (INCB/UNODC) into fixed JavaScript schemas.
  * Pure functions only: no network calls, no filesystem writes, no console spam.

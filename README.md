@@ -1,14 +1,14 @@
 <!-- textura-banner -->
 <div align="center">
-  <a href="https://github.com/beepboop2025/drug-price-observatory"><img src="./banner.svg" width="100%" alt="drug-price-observatory" /></a>
+  <a href="https://github.com/beepboop2025/narcoscope"><img src="./banner.svg" width="100%" alt="narcoscope" /></a>
 </div>
 
-![tests](https://github.com/beepboop2025/drug-price-observatory/actions/workflows/tests.yml/badge.svg)
+![tests](https://github.com/beepboop2025/narcoscope/actions/workflows/tests.yml/badge.svg)
 ![coverage](https://img.shields.io/badge/coverage-86%25-brightgreen)
 
-# 🌍 Global Drug Price Observatory
+# 🌍 NarcoScope
 
-**Live: [drug-price-observatory.vercel.app](https://drug-price-observatory.vercel.app)**
+**Live: [drug-price-observatory.vercel.app](https://drug-price-observatory.vercel.app)** · permanent home: **narcoscope.io** (domain reserved, coming soon)
 
 An educational, public-good **data explorer** that makes the world's drug-trade
 data *legible*. UNODC, INCB, and EUDA already publish street (retail) prices,
@@ -55,7 +55,7 @@ letter-by-letter, and sections spring in as you scroll. The immersive layer is f
 gated behind `prefers-reduced-motion` and falls back to a lightweight 2D canvas on
 mobile / WebGL-less devices.
 
-![Global Drug Price Observatory — WebGL hero globe](docs/screenshots/hero.png)
+![NarcoScope — WebGL hero globe](docs/screenshots/hero.png)
 
 **Street Prices** — price trends + affordability lens, with a plain-English summary:
 
