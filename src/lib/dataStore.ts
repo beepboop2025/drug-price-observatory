@@ -8,7 +8,14 @@
 import { useSyncExternalStore } from 'react'
 import { PRICE_RECORDS } from '../data/prices'
 import { FLOW_RECORDS, PRECURSOR_PRICE_RECORDS } from '../data/flows'
-import { MM_REGIONS, MM_BORDER_NODES, MM_REGION_RECORDS, MM_FLOW_RECORDS } from '../data/myanmar'
+import {
+  MM_BORDER_NODES,
+  MM_CONFLICT_EVENTS,
+  MM_FLOW_RECORDS,
+  MM_PRECURSOR_FLOWS,
+  MM_REGIONS,
+  MM_REGION_RECORDS,
+} from '../data/myanmar'
 import * as ingest from './ingest'
 import type { DataState, LoadBundle, LoadReport, MmNode } from '../types'
 
@@ -24,6 +31,8 @@ let state: DataState = {
   mmBorderNodes: MM_BORDER_NODES,
   mmRegionRecords: MM_REGION_RECORDS,
   mmFlowRecords: MM_FLOW_RECORDS,
+  mmConflictEvents: MM_CONFLICT_EVENTS,
+  mmPrecursorFlows: MM_PRECURSOR_FLOWS,
 }
 
 const listeners = new Set<() => void>()
@@ -82,6 +91,8 @@ export function loadData(bundle: LoadBundle = {}): LoadReport {
   )
   apply('mmRegionRecords', 'parseMyanmarRegionRecords', bundle.mmRegionRecords, knownIds)
   apply('mmFlowRecords', 'parseMyanmarFlows', bundle.mmFlows, knownIds)
+  apply('mmConflictEvents', 'parseMyanmarConflictEvents', bundle.mmConflictEvents, knownIds)
+  apply('mmPrecursorFlows', 'parseMyanmarPrecursorFlows', bundle.mmPrecursorFlows, knownIds)
 
   report.ok = report.errors.length === 0
   if (Object.keys(report.loaded).length > 0) {

@@ -1,0 +1,103 @@
+import { describe, it, assert } from 'vitest'
+import { buildMyanmarIntelligenceBriefing } from './intelligence'
+
+describe('buildMyanmarIntelligenceBriefing', () => {
+  const regions = [
+    { id: 'shan_north', label: 'Shan North', lat: 23, lng: 98 },
+    { id: 'kachin', label: 'Kachin', lat: 26, lng: 97 },
+  ]
+
+  it('ranks regions by fused risk and exposes evidence provenance', () => {
+    const briefing = buildMyanmarIntelligenceBriefing({
+      year: 2024,
+      regions,
+      regionRecords: [
+        { region: 'shan_north', year: 2024, opiumHa: 10000, methIndex: 90 },
+        { region: 'kachin', year: 2024, opiumHa: 5000, methIndex: 20 },
+      ],
+      conflictEvents: [
+        {
+          region: 'shan_north',
+          year: 2024,
+          actor: 'Border militia',
+          actorType: 'militia',
+          eventType: 'clash',
+          intensity: 80,
+          sourceName: 'ACLED',
+          sourceUrl: 'https://example.org/acled',
+        },
+      ],
+      precursorFlows: [
+        {
+          originCountry: 'China',
+          transitCountry: null,
+          to: 'shan_north',
+          year: 2024,
+          precursor: 'meth_precursors',
+          quantityKg: 4000,
+          confidence: 'official',
+          sourceName: 'INCB',
+          sourceUrl: 'https://example.org/incb',
+        },
+      ],
+      outflows: [
+        { from: 'shan_north', to: 'muse', year: 2024, quantityKg: 3000, drug: 'Methamphetamine' },
+      ],
+    })
+
+    assert.equal(briefing.profiles[0].region, 'shan_north')
+    assert.ok(briefing.profiles[0].riskScore > briefing.profiles[1].riskScore)
+    assert.equal(briefing.profiles[0].sourceDiversity, 2)
+    assert.equal(briefing.enterpriseReadiness.multiSourceRegions, 1)
+    assert.ok(briefing.edges.some((edge) => edge.relation === 'precursor_inflow'))
+    assert.ok(briefing.edges.some((edge) => edge.relation === 'conflict_pressure'))
+  })
+
+  it('downweights estimated precursor observations compared with official observations', () => {
+    const official = buildMyanmarIntelligenceBriefing({
+      year: 2024,
+      regions,
+      regionRecords: [],
+      conflictEvents: [],
+      precursorFlows: [
+        {
+          originCountry: 'China',
+          transitCountry: null,
+          to: 'shan_north',
+          year: 2024,
+          precursor: 'meth_precursors',
+          quantityKg: 1000,
+          confidence: 'official',
+          sourceName: 'INCB',
+          sourceUrl: 'https://example.org',
+        },
+      ],
+      outflows: [],
+    })
+    const estimated = buildMyanmarIntelligenceBriefing({
+      year: 2024,
+      regions,
+      regionRecords: [],
+      conflictEvents: [],
+      precursorFlows: [
+        {
+          originCountry: 'China',
+          transitCountry: null,
+          to: 'shan_north',
+          year: 2024,
+          precursor: 'meth_precursors',
+          quantityKg: 1000,
+          confidence: 'estimated',
+          sourceName: 'Report',
+          sourceUrl: 'https://example.org',
+        },
+      ],
+      outflows: [],
+    })
+
+    assert.ok(
+      official.edges.find((edge) => edge.relation === 'precursor_inflow').weight >
+        estimated.edges.find((edge) => edge.relation === 'precursor_inflow').weight,
+    )
+  })
+})

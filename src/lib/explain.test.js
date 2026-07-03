@@ -128,10 +128,35 @@ describe('explainMyanmar', () => {
       },
     ]
     const labelOf = (id) => id
-    const sentence = explainMyanmar(regionRows, flows, 2023, labelOf)
+    const conflictEvents = [
+      {
+        region: 'Shan',
+        actor: 'Border militias',
+        actorType: 'militia',
+        eventType: 'clash',
+        intensity: 90,
+        sourceName: 'ACLED',
+        sourceUrl: 'https://acleddata.com/asia-pacific/myanmar/',
+      },
+    ]
+    const precursorFlows = [
+      {
+        originCountry: 'China',
+        transitCountry: 'Laos',
+        to: 'Shan',
+        precursor: 'meth_precursors',
+        quantityKg: 5000,
+        confidence: 'reported',
+        sourceName: 'INCB',
+        sourceUrl: 'https://www.incb.org/incb/en/precursors/',
+      },
+    ]
+    const sentence = explainMyanmar(regionRows, flows, 2023, labelOf, conflictEvents, precursorFlows)
     assert.ok(sentence.includes('Shan'))
     assert.ok(sentence.includes('MYA-Shan'))
     assert.ok(sentence.includes('THA-ChiangMai'))
     assert.ok(sentence.includes('2023'))
+    assert.ok(sentence.includes('civil-war overlay'))
+    assert.ok(sentence.includes('China accounts for 100%'))
   })
 })

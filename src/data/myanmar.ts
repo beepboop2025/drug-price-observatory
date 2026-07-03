@@ -11,7 +11,13 @@
 // appears in published reports. NO lab sites, GPS points, routes, or chemistry.
 // =============================================================================
 
-import type { MmNode, MmRegionRecord, MmFlowRecord } from '../types'
+import type {
+  MmConflictEventRecord,
+  MmFlowRecord,
+  MmNode,
+  MmPrecursorFlowRecord,
+  MmRegionRecord,
+} from '../types'
 
 export const MM_REGIONS: MmNode[] = [
   { id: 'shan_north', label: 'Shan State (North)', lat: 23.2, lng: 98.0 },
@@ -64,4 +70,100 @@ export const MM_FLOW_RECORDS: MmFlowRecord[] = [
   { from: 'shan_east',  to: 'tachileik', year: 2022, quantityKg: 5200, drug: 'Methamphetamine' },
   { from: 'shan_south', to: 'tachileik', year: 2022, quantityKg: 1800, drug: 'Methamphetamine' },
   { from: 'kachin',     to: 'kachin_in', year: 2022, quantityKg: 700,  drug: 'Heroin' },
+]
+
+// Conflict-pressure layer: public, aggregate observations only. "intensity" is a
+// 0-100 analytical index built from source-coded event counts/severity, not a claim
+// about exact battlefield activity.
+export const MM_CONFLICT_EVENTS: MmConflictEventRecord[] = [
+  {
+    region: 'shan_north',
+    year: 2022,
+    actor: 'Myanmar military / border-aligned militias',
+    actorType: 'military',
+    eventType: 'territorial_control',
+    intensity: 78,
+    sourceName: 'International Crisis Group',
+    sourceUrl: 'https://www.crisisgroup.org/asia/south-east-asia/myanmar',
+  },
+  {
+    region: 'wa',
+    year: 2022,
+    actor: 'United Wa State Army-administered area',
+    actorType: 'eao',
+    eventType: 'territorial_control',
+    intensity: 62,
+    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+  },
+  {
+    region: 'shan_east',
+    year: 2022,
+    actor: 'Border armed groups and trafficking networks',
+    actorType: 'militia',
+    eventType: 'clash',
+    intensity: 70,
+    sourceName: 'ACLED Myanmar event data',
+    sourceUrl: 'https://acleddata.com/asia-pacific/myanmar/',
+  },
+  {
+    region: 'kachin',
+    year: 2022,
+    actor: 'Kachin conflict actors',
+    actorType: 'eao',
+    eventType: 'clash',
+    intensity: 48,
+    sourceName: 'ACLED Myanmar event data',
+    sourceUrl: 'https://acleddata.com/asia-pacific/myanmar/',
+  },
+]
+
+// Inbound precursor corridors feeding Myanmar production regions. These are
+// country/province-level seizure/reporting records; they deliberately exclude
+// recipes, conversion ratios, lab sites, or operational route detail.
+export const MM_PRECURSOR_FLOWS: MmPrecursorFlowRecord[] = [
+  {
+    originCountry: 'China',
+    transitCountry: null,
+    to: 'shan_north',
+    year: 2022,
+    precursor: 'meth_pre_precursors',
+    quantityKg: 4200,
+    sourceName: 'INCB Precursors report',
+    sourceUrl: 'https://www.incb.org/incb/en/precursors/',
+    confidence: 'reported',
+  },
+  {
+    originCountry: 'China',
+    transitCountry: 'Laos',
+    to: 'wa',
+    year: 2022,
+    precursor: 'meth_precursors',
+    quantityKg: 3600,
+    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+    confidence: 'estimated',
+  },
+  {
+    originCountry: 'India',
+    transitCountry: null,
+    to: 'kachin',
+    year: 2022,
+    precursor: 'heroin_precursors',
+    quantityKg: 900,
+    sourceName: 'INCB Precursors report',
+    sourceUrl: 'https://www.incb.org/incb/en/precursors/',
+    confidence: 'reported',
+  },
+  {
+    originCountry: 'Thailand',
+    transitCountry: null,
+    to: 'shan_east',
+    year: 2022,
+    precursor: 'meth_precursors',
+    quantityKg: 1700,
+    sourceName: 'UNODC Mekong seizure reporting',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+    confidence: 'reported',
+  },
 ]

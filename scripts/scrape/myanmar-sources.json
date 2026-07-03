@@ -1,0 +1,33 @@
+{
+  "description": "Public sources for Myanmar civil-war / precursor-flow data preparation. The scraper reads only these allowlisted hosts.",
+  "sources": [
+    {
+      "id": "unodc-roseap-synthetic-drugs",
+      "name": "UNODC Synthetic Drugs in East and Southeast Asia",
+      "url": "https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html",
+      "focus": "precursor_flows",
+      "keywords": ["Myanmar", "China", "precursor", "methamphetamine", "Shan", "Golden Triangle"]
+    },
+    {
+      "id": "incb-precursors",
+      "name": "INCB Precursors",
+      "url": "https://www.incb.org/incb/en/precursors/",
+      "focus": "precursor_flows",
+      "keywords": ["Myanmar", "China", "precursor", "acetic anhydride", "methamphetamine"]
+    },
+    {
+      "id": "crisis-group-myanmar",
+      "name": "International Crisis Group — Myanmar",
+      "url": "https://www.crisisgroup.org/asia/south-east-asia/myanmar",
+      "focus": "conflict_events",
+      "keywords": ["Shan", "Wa", "Kachin", "militia", "border", "China", "conflict"]
+    },
+    {
+      "id": "acled-myanmar",
+      "name": "ACLED — Myanmar",
+      "url": "https://acleddata.com/asia-pacific/myanmar/",
+      "focus": "conflict_events",
+      "keywords": ["Myanmar", "Shan", "Kachin", "armed", "clashes", "military"]
+    }
+  ]
+}

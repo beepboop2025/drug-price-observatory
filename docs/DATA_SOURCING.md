@@ -95,6 +95,56 @@ These are **reference geo tables you build once**, not annual data.
   (source may say "meth", "yaba", "ice" → all become Methamphetamine).
 - `from`/`to` must match `id`s from datasets #4 / #5.
 
+## 8. Myanmar civil-war events  → "Myanmar civil-war events" (`parseMyanmarConflictEvents`)
+
+- **Source:** ACLED Myanmar, International Crisis Group Myanmar briefings, UN
+  reporting, or other public conflict-monitoring datasets.
+- **Required columns:** `region, year, actor, eventType, intensity, sourceName, sourceUrl`
+- **Optional:** `actorType`
+- **Allowed `actorType` values:** `military`, `eao`, `militia`, `resistance`,
+  `criminal`, `state`, `unknown` (unknown source values are normalized to
+  `unknown`).
+- **Allowed `eventType` values:** `clash`, `airstrike`,
+  `territorial_control`, `ceasefire`, `sanction`, `seizure`, `other`.
+- **`intensity` is NOT a live battlefield feed.** It is a relative 0–100
+  conflict-pressure indicator you construct from source-coded event counts,
+  severity, or territory-control status. Keep the method in provenance notes.
+
+## 9. Myanmar precursor inflows  → "Myanmar precursor inflows" (`parseMyanmarPrecursorFlows`)
+
+- **Source:** INCB Precursors reports, UNODC Synthetic Drugs in East & Southeast
+  Asia, Mekong seizure reporting, and source-cited public reports.
+- **Required columns:** `originCountry, to, year, precursor, quantityKg, sourceName, sourceUrl`
+- **Optional:** `transitCountry, confidence`
+- **Allowed `precursor` values:** same enum as the global precursor-flow layer:
+  `fentanyl_precursors`, `meth_precursors`, `meth_pre_precursors`,
+  `heroin_precursors`.
+- **Allowed `confidence` values:** `official`, `reported`, `estimated`.
+- **Ethical grain:** country → Myanmar region only. Do not enter lab sites,
+  tactical route detail, formulas, conversion ratios, yields, or procurement
+  instructions.
+
+## 10. Scraped observations  → source triage, not direct app data
+
+Run the Palimpsest-style governed scraper to collect source excerpts and content
+fingerprints:
+
+```bash
+npm run scrape:myanmar -- --out docs/sources/myanmar-observations.csv --pretty
+```
+
+The manifest lives at `scripts/scrape/myanmar-sources.json`. The scraper:
+
+- reads only public URLs listed in that manifest;
+- refuses non-HTTP(S) URLs, non-allowlisted redirect hosts, and private/link-local
+  DNS results;
+- caps response size and redirects;
+- normalizes page text and records SHA-256 fingerprints;
+- extracts keyword-matched excerpts for analyst review.
+
+Do **not** load the observation CSV directly into the app. Use it to find and
+cite passages, then manually code verified rows into datasets #8 and #9 above.
+
 ---
 
 ## Recommended workflow
@@ -103,7 +153,7 @@ These are **reference geo tables you build once**, not annual data.
 2. Build **one** CSV (start with street prices), exact headers as above.
 3. Load it in the footer panel → read the **warnings report** → fix flagged rows.
 4. **Verify** 3–5 figures against the source PDF/table.
-5. Repeat per dataset, in the order 1 → 7 (geo tables #4/#5 before #6/#7).
+5. Repeat per dataset, in the order 1 → 9 (geo tables #4/#5 before #6–#9).
 6. Keep raw downloads + a one-line provenance note per dataset in `docs/sources/`
    so every figure is traceable for citation.
 7. When all real data loads cleanly, the header badge flips to **"Live data"** —
