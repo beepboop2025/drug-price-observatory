@@ -3,6 +3,9 @@
   <a href="https://github.com/beepboop2025/drug-price-observatory"><img src="./banner.svg" width="100%" alt="drug-price-observatory" /></a>
 </div>
 
+![tests](https://github.com/beepboop2025/drug-price-observatory/actions/workflows/tests.yml/badge.svg)
+![coverage](https://img.shields.io/badge/coverage-86%25-brightgreen)
+
 # 🌍 Global Drug Price Observatory
 
 An educational, public-good **data explorer** that makes the world's drug-trade

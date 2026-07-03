@@ -7,5 +7,13 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.{js,ts}', 'scripts/**/*.test.{js,ts,mjs}'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'text-summary'],
+      // Coverage is measured on the pure-logic core (parsers, metrics,
+      // legibility layer, runtime store) — the deterministic code the tests
+      // actually pin. UI/3D/render layers are intentionally excluded.
+      include: ['src/lib/**/*.ts'],
+    },
   },
 })
