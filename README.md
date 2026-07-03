@@ -8,6 +8,8 @@
 
 # 🌍 Global Drug Price Observatory
 
+**Live: [drug-price-observatory.vercel.app](https://drug-price-observatory.vercel.app)**
+
 An educational, public-good **data explorer** that makes the world's drug-trade
 data *legible*. UNODC, INCB, and EUDA already publish street (retail) prices,
 precursor-chemical prices, and trafficking-flow/seizure data — but it's buried in
