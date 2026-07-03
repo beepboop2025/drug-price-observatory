@@ -9,11 +9,10 @@
 //   • MM_REGION_RECORDS.methIndex — CONSTRUCTED 0-100 relative indicator
 //     shaped to UNODC synthetic-drugs reporting; replace when a regional
 //     seizure-derived index is ingested.
-//   • MM_CONFLICT_EVENTS — DERIVED from the same survey's Figure 3 ("Monthly
-//     number of violent incidents, 2023 to 2025", source: ACLED): intensities
-//     anchor to the published per-region incident levels, not invented.
-//     Replace with event-grain ACLED aggregation via
-//     scripts/convert/acled-to-mm-conflict.mjs once an ACLED key is set up.
+//   • MM_CONFLICT_EVENTS — OFFICIAL. ACLED aggregated data (week × Admin1
+//     event/fatality counts), converted at region-year grain by
+//     scripts/convert/acled-to-mm-conflict.mjs. Named-actor records (ICG)
+//     carry the actor-network signal until event-grain ACLED access.
 //   • MM_FLOW_RECORDS / MM_PRECURSOR_FLOWS — ILLUSTRATIVE samples in the
 //     shape of INCB/UNODC reporting, pending INCB Precursors annex and UNODC
 //     IDS ingestion (see scripts/pipeline/sources.json).
@@ -131,27 +130,49 @@ export const MM_FLOW_RECORDS: MmFlowRecord[] = [
   },
 ]
 
-// DERIVED from UNODC Myanmar Opium Survey 2025, Figure 3 ("Monthly number of
-// violent incidents, 2023 to 2025", underlying source: ACLED): intensity
-// values anchor to the published per-region incident magnitudes — North Shan
-// spiking hardest through late 2023-2024 then persisting; Kachin escalating
-// from spring 2024 into the 2025 harvest; South Shan low-moderate; East Shan
-// minimal. Actor names reflect prominent publicly reported parties, but the
-// event grain is a REGION-YEAR AGGREGATE, not individual incidents. Replace
-// with scripts/convert/acled-to-mm-conflict.mjs output once a key exists.
-const MOS25 = {
-  sourceName: 'UNODC Myanmar Opium Survey 2025 (ACLED data)',
-  sourceUrl: 'https://www.unodc.org/documents/crop-monitoring/Myanmar/Myanmar_Opium_Survey_2025.pdf',
+// OFFICIAL: aggregated from the ACLED "Aggregated data on Asia-Pacific" file
+// (week x Admin1 event/fatality counts; file: Asia-Pacific_aggregated_data_
+// up_to_week_of-2026-06-20.xlsx, converted 2026-07-03 by
+// scripts/convert/acled-to-mm-conflict.mjs --aggregated-xlsx, years 2024+2025).
+// Intensity = log-scaled share of the largest (region, year, event class)
+// burden in the batch (see aggIntensity in the converter). Actor detail does
+// not exist at this grain, hence the explicit aggregate actor label -- the
+// two ICG records below carry the named-actor signal instead.
+// Attribution requirement: "Data: ACLED" wherever displayed.
+const ACLED_AGG = {
+  sourceName: 'ACLED (aggregated data file)',
+  sourceUrl: 'https://acleddata.com',
 }
 export const MM_CONFLICT_EVENTS: MmConflictEventRecord[] = [
-  { region: 'shan_north', year: 2024, actor: 'Myanmar military and northern alliance EAOs', actorType: 'military', eventType: 'clash', intensity: 90, ...MOS25 },
-  { region: 'shan_north', year: 2025, actor: 'Myanmar military and northern alliance EAOs', actorType: 'military', eventType: 'clash', intensity: 80, ...MOS25 },
-  { region: 'kachin',     year: 2024, actor: 'Kachin Independence Army and Myanmar military', actorType: 'eao', eventType: 'clash', intensity: 65, ...MOS25 },
-  { region: 'kachin',     year: 2025, actor: 'Kachin Independence Army and Myanmar military', actorType: 'eao', eventType: 'clash', intensity: 70, ...MOS25 },
-  { region: 'shan_south', year: 2024, actor: 'Resistance forces and Myanmar military', actorType: 'resistance', eventType: 'clash', intensity: 35, ...MOS25 },
-  { region: 'shan_south', year: 2025, actor: 'Resistance forces and Myanmar military', actorType: 'resistance', eventType: 'clash', intensity: 45, ...MOS25 },
-  { region: 'shan_east',  year: 2024, actor: 'Border armed groups', actorType: 'militia', eventType: 'clash', intensity: 8, ...MOS25 },
-  { region: 'shan_east',  year: 2025, actor: 'Border armed groups', actorType: 'militia', eventType: 'clash', intensity: 8, ...MOS25 },
+  { region: 'kachin', year: 2024, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'clash', intensity: 99, ...ACLED_AGG },
+  { region: 'kachin', year: 2024, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'airstrike', intensity: 83, ...ACLED_AGG },
+  { region: 'kachin', year: 2024, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'territorial_control', intensity: 67, ...ACLED_AGG },
+  { region: 'kachin', year: 2025, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'clash', intensity: 96, ...ACLED_AGG },
+  { region: 'kachin', year: 2025, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'airstrike', intensity: 88, ...ACLED_AGG },
+  { region: 'kachin', year: 2025, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'territorial_control', intensity: 65, ...ACLED_AGG },
+  { region: 'kayah', year: 2024, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'clash', intensity: 81, ...ACLED_AGG },
+  { region: 'kayah', year: 2024, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'airstrike', intensity: 63, ...ACLED_AGG },
+  { region: 'kayah', year: 2024, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'territorial_control', intensity: 44, ...ACLED_AGG },
+  { region: 'kayah', year: 2025, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'clash', intensity: 82, ...ACLED_AGG },
+  { region: 'kayah', year: 2025, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'airstrike', intensity: 74, ...ACLED_AGG },
+  { region: 'kayah', year: 2025, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'territorial_control', intensity: 57, ...ACLED_AGG },
+  { region: 'shan_east', year: 2024, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'clash', intensity: 33, ...ACLED_AGG },
+  { region: 'shan_east', year: 2024, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'territorial_control', intensity: 29, ...ACLED_AGG },
+  { region: 'shan_east', year: 2024, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'airstrike', intensity: 19, ...ACLED_AGG },
+  { region: 'shan_east', year: 2025, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'clash', intensity: 36, ...ACLED_AGG },
+  { region: 'shan_east', year: 2025, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'territorial_control', intensity: 25, ...ACLED_AGG },
+  { region: 'shan_north', year: 2024, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'clash', intensity: 100, ...ACLED_AGG },
+  { region: 'shan_north', year: 2024, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'airstrike', intensity: 95, ...ACLED_AGG },
+  { region: 'shan_north', year: 2024, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'territorial_control', intensity: 66, ...ACLED_AGG },
+  { region: 'shan_north', year: 2025, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'airstrike', intensity: 88, ...ACLED_AGG },
+  { region: 'shan_north', year: 2025, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'clash', intensity: 85, ...ACLED_AGG },
+  { region: 'shan_north', year: 2025, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'territorial_control', intensity: 71, ...ACLED_AGG },
+  { region: 'shan_south', year: 2024, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'clash', intensity: 94, ...ACLED_AGG },
+  { region: 'shan_south', year: 2024, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'airstrike', intensity: 81, ...ACLED_AGG },
+  { region: 'shan_south', year: 2024, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'territorial_control', intensity: 65, ...ACLED_AGG },
+  { region: 'shan_south', year: 2025, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'clash', intensity: 92, ...ACLED_AGG },
+  { region: 'shan_south', year: 2025, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'airstrike', intensity: 74, ...ACLED_AGG },
+  { region: 'shan_south', year: 2025, actor: 'Armed-conflict events (ACLED aggregated)', actorType: 'unknown', eventType: 'territorial_control', intensity: 66, ...ACLED_AGG },
   // Publicly reported UWSA territorial control: the Wa Self-Administered
   // Division proper, plus reported UWSA-administered/influence pockets in
   // southern Shan (e.g. Mong Hsat/Mongton townships). The same named actor in

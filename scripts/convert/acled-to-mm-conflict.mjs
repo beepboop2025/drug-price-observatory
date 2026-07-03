@@ -71,6 +71,65 @@ export function intensityOf(events, fatalities) {
 }
 
 /**
+ * Intensity for ANNUAL aggregates (the myACLED "aggregated data" files):
+ * yearly event+fatality burdens are large enough to saturate the event-grain
+ * formula above, so instead each (region, year, event class) burden is
+ * expressed as a log-scaled share of the LARGEST burden in the batch:
+ *   burden = events + fatalities
+ *   intensity = round( 100 · ln(1+burden) / ln(1+maxBurden) )
+ * Relative-to-max matches how the fusion engine consumes conflictPressure.
+ */
+export function aggIntensity(burden, maxBurden) {
+  if (maxBurden <= 0 || burden <= 0) return 0
+  return Math.round(100 * (Math.log(1 + burden) / Math.log(1 + maxBurden)))
+}
+
+/** Excel serial date (1900 system) -> calendar year. */
+export function excelSerialYear(serial) {
+  return new Date(Date.UTC(1899, 11, 30) + serial * 86400000).getUTCFullYear()
+}
+
+/**
+ * Aggregate rows of an ACLED *aggregated data* file (columns WEEK, COUNTRY,
+ * ADMIN1, EVENT_TYPE, EVENTS, FATALITIES) into app-grain records for the
+ * given years. Actor detail does not exist at this grain, so records carry an
+ * explicit aggregate actor label with actorType 'unknown'.
+ */
+export function aggregateWeekly(rows, years) {
+  const wanted = new Set(years)
+  const groups = new Map()
+  let skipped = 0
+  for (const r of rows) {
+    if (r.COUNTRY !== 'Myanmar') { skipped++; continue }
+    const region = ADMIN1_TO_REGION[r.ADMIN1]
+    const eventType = EVENT_TYPE_MAP[r.EVENT_TYPE]
+    const year = excelSerialYear(Number(r.WEEK))
+    if (!region || !eventType || !wanted.has(year)) { skipped++; continue }
+    const key = `${region}|${year}|${eventType}`
+    if (!groups.has(key)) groups.set(key, { events: 0, fatalities: 0 })
+    const g = groups.get(key)
+    g.events += Number(r.EVENTS) || 0
+    g.fatalities += Number(r.FATALITIES) || 0
+  }
+  const maxBurden = Math.max(0, ...[...groups.values()].map((g) => g.events + g.fatalities))
+  const records = [...groups.entries()].map(([key, g]) => {
+    const [region, year, eventType] = key.split('|')
+    return {
+      region,
+      year: Number(year),
+      actor: 'Armed-conflict events (ACLED aggregated)',
+      actorType: 'unknown',
+      eventType,
+      intensity: aggIntensity(g.events + g.fatalities, maxBurden),
+      sourceName: 'ACLED (aggregated data file)',
+      sourceUrl: 'https://acleddata.com',
+    }
+  })
+  records.sort((a, b) => a.region.localeCompare(b.region) || a.year - b.year || b.intensity - a.intensity)
+  return { records, skipped }
+}
+
+/**
  * Aggregate ACLED event rows ({ year, admin1, actor1, event_type, fatalities })
  * into app-grain records. Returns { records, skipped } where skipped counts
  * rows outside the mapped regions/event classes.
@@ -144,6 +203,25 @@ const isMain = process.argv[1] && import.meta.url.endsWith(path.basename(process
 if (isMain) {
   const args = process.argv.slice(2)
   let rows
+  if (args[0] === '--aggregated-xlsx' && args[1]) {
+    // myACLED "Aggregated data" regional file (week × Admin1 grain).
+    let xlsx
+    try { xlsx = (await import('xlsx')).default } catch {
+      console.error('The optional "xlsx" package is required: npm install --no-save xlsx'); process.exit(1)
+    }
+    const wb = xlsx.readFile(args[1])
+    const all = xlsx.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' })
+    const years = (args[2] ?? '2024,2025').split(',').map(Number)
+    const { records, skipped } = aggregateWeekly(all, years)
+    const outDir = path.resolve('scripts/convert/output')
+    fs.mkdirSync(outDir, { recursive: true })
+    const outPath = path.join(outDir, 'mm-conflict-events.csv')
+    fs.writeFileSync(outPath, toOutputCsv(records))
+    console.log(`weekly rows in: ${all.length}, aggregate records out: ${records.length}, outside scope: ${skipped}`)
+    console.log(records.map((r) => `  ${r.region} ${r.year} ${r.eventType} intensity=${r.intensity}`).join('\n'))
+    console.log(`wrote ${outPath}`)
+    process.exit(0)
+  }
   if (args[0] === '--csv' && args[1]) {
     rows = parseCsv(fs.readFileSync(args[1], 'utf8'))
   } else if (args[0] === '--api') {

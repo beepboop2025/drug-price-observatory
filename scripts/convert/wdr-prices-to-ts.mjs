@@ -205,8 +205,9 @@ ${gdpLines}
 }
 
 export const SOURCES: Source[] = [
-  { name: 'UNODC World Drug Report 2025 — Statistical Annex 8.1: Prices and purities of drugs', url: 'https://www.unodc.org/unodc/en/data-and-analysis/world-drug-report-2025-annex.html' },
-  { name: 'UNODC — Drugs: prices (data portal)', url: 'https://dataunodc.un.org' },
+  { name: 'UNODC World Drug Report 2025 — Statistical Annexes 7.1 (seizures) & 8.1 (prices/purities)', url: 'https://www.unodc.org/unodc/en/data-and-analysis/world-drug-report-2025-annex.html' },
+  { name: 'UNODC Myanmar Opium Survey 2025', url: 'https://www.unodc.org/documents/crop-monitoring/Myanmar/Myanmar_Opium_Survey_2025.pdf' },
+  { name: 'Data: ACLED — acleddata.com (Myanmar conflict pressure)', url: 'https://acleddata.com' },
   { name: 'EUDA (EMCDDA) — price & purity data', url: 'https://www.euda.europa.eu/data' },
   { name: 'World Bank — GDP per capita, NY.GDP.PCAP.CD', url: 'https://data.worldbank.org/indicator/NY.GDP.PCAP.CD' },
 ]
