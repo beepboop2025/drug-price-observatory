@@ -56,6 +56,7 @@ export default function App() {
                 stagger={26}
               />
               <p className="tagline">Making the world&rsquo;s drug-trade data legible.</p>
+              <p className="formerly-note">formerly the Drug Price Observatory</p>
             </div>
             <span
               className={`data-badge tk-chip ${isSample ? 'tk-chip--warning' : 'tk-chip--ok'}`}
