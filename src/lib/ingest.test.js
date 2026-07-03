@@ -269,6 +269,29 @@ shan_north,wa,2023,500,Methamphetamine,secret trail`;
     });
   });
 
+  it('parses optional sourceName/sourceUrl columns when present', () => {
+    const csv = `from,to,year,quantityKg,drug,sourceName,sourceUrl
+shan_north,wa,2023,500,Methamphetamine,UNODC,https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html`;
+
+    const { records, warnings } = parseMyanmarFlows(csv);
+
+    assert.equal(records.length, 1);
+    assert.equal(warnings.length, 0);
+    assert.equal(records[0].sourceName, 'UNODC');
+    assert.equal(records[0].sourceUrl, 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html');
+  });
+
+  it('omits sourceName/sourceUrl keys entirely when the columns are absent (backward compatible)', () => {
+    const csv = `from,to,year,quantityKg,drug
+shan_north,wa,2023,500,Methamphetamine`;
+
+    const { records } = parseMyanmarFlows(csv);
+
+    assert.equal(records.length, 1);
+    assert.equal('sourceName' in records[0], false);
+    assert.equal('sourceUrl' in records[0], false);
+  });
+
   describe('parseMyanmarConflictEvents', () => {
     it('parses a conflict event and normalizes actor/event types', () => {
       const csv = `region,year,actor,actorType,eventType,intensity,sourceName,sourceUrl

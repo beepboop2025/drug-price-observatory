@@ -63,6 +63,14 @@
 | `year`        | `Year`, `Year of Seizure`, `Year of Report`, `Reporting Year`           |
 | `quantityKg`  | `Quantity (kg)`, `Quantity Kg`, `Weight (kg)`, `Seized (kg)`            |
 | `drug`        | `Drug`, `Substance`, `Drug Type`, `Drug group`                          |
+| `sourceName`  | `Source name`, `Source`, `Publisher`, `Report` (optional)               |
+| `sourceUrl`   | `Source URL`, `URL`, `Link` (optional)                                  |
+
+`sourceName`/`sourceUrl` are optional — unlike the conflict-events and
+precursor-inflow datasets below, where they're required — to stay
+backward-compatible with pre-existing flow CSVs that predate provenance
+tracking. Populate them for any newly ingested outbound-flow record so
+corridor-concentration and cross-source disagreement checks can run on it.
 
 ## Myanmar civil-war events (`parseMyanmarConflictEvents`)
 

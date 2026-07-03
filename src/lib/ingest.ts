@@ -680,7 +680,13 @@ export function parseMyanmarFlows(
       }
     }
 
-    records.push({ from, to, year, quantityKg, drug: drugRaw })
+    // sourceName/sourceUrl are optional here (unlike conflict events and
+    // precursor flows) to stay backward-compatible with existing flow CSVs
+    // that predate provenance tracking; populate them when the columns exist.
+    const sourceName = coerceString(getField(row, headerMap, 'sourceName')) || undefined
+    const sourceUrl = coerceString(getField(row, headerMap, 'sourceUrl')) || undefined
+
+    records.push({ from, to, year, quantityKg, drug: drugRaw, ...(sourceName ? { sourceName } : {}), ...(sourceUrl ? { sourceUrl } : {}) })
   })
 
   return { records, warnings }

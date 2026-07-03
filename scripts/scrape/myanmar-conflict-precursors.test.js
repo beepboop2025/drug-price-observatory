@@ -3,11 +3,18 @@ import {
   buildAuditRecord,
   contentKey,
   extractItems,
+  isRetryableError,
+  loadObservationFingerprints,
   normalizeBody,
   observationsToCsv,
   robotsAllows,
   validateManifest,
+  FetchError,
+  BlockedAddressError,
 } from './myanmar-conflict-precursors.mjs'
+import fs from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 
 describe('myanmar conflict/precursor scraper helpers', () => {
   it('normalizes volatile page chrome before fingerprinting', () => {
@@ -94,5 +101,42 @@ describe('myanmar conflict/precursor scraper helpers', () => {
       previousHash: '',
       sourceId: 's1',
     })))
+  })
+
+  it('classifies transient network/5xx failures as retryable but never policy failures', () => {
+    assert.equal(isRetryableError(new FetchError('fetch failed for https://x: getaddrinfo ENOTFOUND')), true)
+    assert.equal(isRetryableError(new FetchError('http status 503')), true)
+    assert.equal(isRetryableError(new FetchError('http status 404')), false)
+    assert.equal(isRetryableError(new BlockedAddressError('host resolves to non-public address')), false)
+    assert.equal(isRetryableError(new FetchError('robots.txt disallows /private')), false)
+    assert.equal(isRetryableError(new FetchError('host is not in manifest allowlist: evil.example')), false)
+    assert.equal(isRetryableError(new Error('not a fetch error')), false)
+  })
+
+  it('loads prior-run observation fingerprints from an existing CSV for cross-run dedupe', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'myanmar-scrape-test-'))
+    const csvPath = path.join(dir, 'observations.csv')
+    const csv = observationsToCsv([
+      {
+        sourceId: 's1',
+        sourceName: 'Source One',
+        focus: 'conflict_events',
+        url: 'https://example.org',
+        observedAt: '2026-01-01T00:00:00.000Z',
+        contentSha256: 'abc',
+        itemSha256: 'item-1',
+        keyword: 'Myanmar',
+        excerpt: 'Myanmar update',
+      },
+    ])
+    await fs.writeFile(csvPath, `${csv}\n`, 'utf8')
+
+    const seen = await loadObservationFingerprints(csvPath)
+    assert.equal(seen.size, 1)
+
+    const missing = await loadObservationFingerprints(path.join(dir, 'does-not-exist.csv'))
+    assert.equal(missing.size, 0)
+
+    await fs.rm(dir, { recursive: true, force: true })
   })
 })

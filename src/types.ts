@@ -85,6 +85,15 @@ export interface MmFlowRecord {
   year: number
   quantityKg: number
   drug: MyanmarDrug
+  /**
+   * Attribution for the outbound seizure figure. Optional (unlike conflict
+   * events/precursor flows) to stay backward-compatible with pre-existing
+   * flow CSVs that predate provenance tracking, but should be populated for
+   * any newly ingested outbound-flow record so corridor-concentration and
+   * cross-source disagreement checks can run on it.
+   */
+  sourceName?: string
+  sourceUrl?: string
 }
 
 export interface MmConflictEventRecord {
