@@ -62,7 +62,7 @@ export default function Flows() {
       <h3>Trafficking corridors — seized volumes (country-level, annual)</h3>
       <table className="data-table">
         <thead>
-          <tr><th>Precursor</th><th>Origin</th><th>Transit</th><th>Destination</th><th>Year</th><th>Seized</th></tr>
+          <tr><th>Precursor</th><th>Origin</th><th>Transit</th><th>Destination</th><th>Year</th><th>Seized</th><th>Source</th></tr>
         </thead>
         <tbody>
           {flows.map((r, i) => (
@@ -73,12 +73,15 @@ export default function Flows() {
               <td>{r.destination}</td>
               <td>{r.year}</td>
               <td>{fmtKg(r.quantityKg)}</td>
+              <td>{r.sourceName
+                ? <a href={r.sourceUrl} target="_blank" rel="noreferrer">{r.sourceName.replace('INCB Precursors Report 2025', 'INCB 2025')}</a>
+                : '—'}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <h3>Precursor prices (USD per kg, country-level)</h3>
+      <h3>Precursor prices (USD per kg, country-level) — illustrative</h3>
       <table className="data-table">
         <thead>
           <tr><th>Precursor</th><th>Country</th><th>Region</th><th>Year</th><th>Price / kg</th></tr>
@@ -97,9 +100,11 @@ export default function Flows() {
       </table>
 
       <p className="note">
-        Highlighted rows mark <strong>China</strong> as origin/source — the
-        upstream supply hub this tool is built to keep visible. See the Flow Map
-        tab for corridor arcs over a world map.
+        Corridor rows are official: each is a seizure/incident corridor stated
+        in the INCB Precursors Report 2025 (paragraph citations in the source
+        data). Highlighted rows mark <strong>China</strong> as a reported
+        origin. Precursor <em>prices</em> remain illustrative — INCB publishes
+        no price series. See the Flow Map tab for corridor arcs.
       </p>
     </section>
   )

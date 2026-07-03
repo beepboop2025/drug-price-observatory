@@ -14,6 +14,8 @@ export type PrecursorId =
   | 'meth_precursors'
   | 'meth_pre_precursors'
   | 'heroin_precursors'
+  | 'mdma_precursors'
+  | 'cocaine_precursors'
 
 /** Drugs that appear in Myanmar cross-border flow records (normalised form). */
 export type MyanmarDrug = 'Methamphetamine' | 'Heroin'
@@ -66,6 +68,9 @@ export interface FlowRecord {
   destination: string
   year: number
   quantityKg: number
+  /** Attribution for the corridor figure (publisher of the seizure/incident report). */
+  sourceName?: string
+  sourceUrl?: string
 }
 
 /** A geographic node (Myanmar production region or border corridor town). */

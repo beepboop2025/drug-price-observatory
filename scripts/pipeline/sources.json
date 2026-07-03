@@ -108,7 +108,7 @@
       "cadence": "annual (~March)",
       "license": "UN open data, attribution",
       "automation": "manual",
-      "feeds": "FLOW_RECORDS + PRECURSOR_PRICE_RECORDS (Precursor Flows tab) — replaces illustrative corridors",
+      "feeds": "FLOW_RECORDS (Precursor Flows tab + globe corridor arcs) — INGESTED 2026-07-03: 8 corridor records extracted from the 2025 report narrative (paragraph-cited). Refresh annually (~March) by re-reading the trafficking chapters; the manufacturing annex (VIII) is deliberately excluded by the ethical grain guard.",
       "transform": "scripts/convert/from-pdf.mjs, corridor rows via the flows CSV schema"
     },
     {
