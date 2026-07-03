@@ -493,3 +493,99 @@ h3 { font-family: var(--font-display); font-weight: 400; font-size: 1.2rem; lett
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
   html { opacity: 1 !important; }
 }
+
+/* =============================================================================
+   SEIZURE GLOBE  (interactive orthographic world map, official UNODC data)
+   ============================================================================= */
+.view-switch { display: flex; gap: 0.5rem; margin: 0 0 1rem; }
+.chip-row {
+  display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0 0 0.9rem;
+}
+.chip {
+  background: var(--panel); color: var(--muted);
+  border: 1px solid var(--border); border-radius: 999px;
+  padding: 0.32rem 0.8rem; font-family: var(--font-body); font-size: 0.82rem;
+  cursor: pointer; transition: color 0.2s var(--ease), border-color 0.2s var(--ease);
+  white-space: nowrap;
+}
+.chip:hover { color: var(--text); border-color: var(--accent); }
+.chip.active {
+  color: #06101f; background: var(--accent-grad); border-color: transparent; font-weight: 600;
+}
+.corridor-toggle { margin-left: auto; font-size: 0.8rem; }
+
+.globe-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+@media (min-width: 900px) {
+  .globe-layout.has-panel, .globe-layout:has(.country-panel) { grid-template-columns: minmax(0, 1fr) 20rem; }
+}
+
+.globe-wrap { position: relative; user-select: none; }
+.globe-svg { display: block; width: 100%; height: auto; cursor: grab; touch-action: none; }
+.globe-svg:active { cursor: grabbing; }
+.globe-halo {
+  fill: none; stroke: rgba(6, 214, 224, 0.35); stroke-width: 1.5;
+  filter: drop-shadow(0 0 1.2rem rgba(6, 214, 224, 0.25));
+}
+.globe-country { stroke: rgba(8, 14, 22, 0.9); stroke-width: 0.4; }
+.globe-country.has-data { cursor: pointer; }
+.globe-country.has-data:hover { stroke: var(--accent); stroke-width: 1.1; }
+.globe-country.pinned { stroke: #ffb020; stroke-width: 1.2; }
+.globe-bubble { stroke: rgba(8, 14, 22, 0.9); stroke-width: 0.8; cursor: pointer; }
+.globe-bubble:hover, .globe-bubble.pinned { stroke: var(--accent); stroke-width: 1.4; }
+
+.globe-arc { stroke-width: 1.3; opacity: 0.55; pointer-events: none; }
+.globe-arc.animated { stroke-dasharray: 6 7; animation: arc-flow 1.6s linear infinite; }
+@keyframes arc-flow { to { stroke-dashoffset: -13; } }
+
+.globe-tooltip {
+  position: absolute; z-index: 5; pointer-events: none;
+  background: rgba(8, 14, 22, 0.94); border: 1px solid var(--border);
+  border-radius: 0.5rem; padding: 0.5rem 0.65rem; max-width: 16rem;
+  font-size: 0.78rem; line-height: 1.45; color: var(--text);
+  box-shadow: 0 0.6rem 1.5rem rgba(0, 0, 0, 0.6);
+}
+.globe-tooltip strong { color: var(--white); }
+.globe-tooltip .tooltip-drug { color: var(--muted); }
+.globe-tooltip .tooltip-hint { color: var(--accent); margin-top: 0.2rem; font-size: 0.7rem; }
+
+.globe-legend {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.5rem 0.65rem 0.2rem; font-size: 0.72rem; color: var(--muted);
+}
+.globe-legend-bar {
+  flex: 0 0 9rem; height: 0.5rem; border-radius: 999px;
+  background: linear-gradient(90deg, rgb(18,32,46) 0%, rgb(10,92,104) 35%, rgb(6,214,224) 60%, rgb(255,176,32) 85%, rgb(255,122,89) 100%);
+  border: 1px solid var(--border);
+}
+.globe-legend-note { opacity: 0.8; }
+
+.country-panel { position: relative; padding: 1rem 1.1rem; align-self: start; }
+.country-panel h3 { margin: 0 1.5rem 0.2rem 0; }
+.country-panel h4 {
+  margin: 0.9rem 0 0.4rem; font-size: 0.72rem; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--muted); font-family: var(--font-body);
+}
+.panel-close {
+  position: absolute; top: 0.6rem; right: 0.6rem;
+  background: none; border: 1px solid var(--border); border-radius: 0.4rem;
+  color: var(--muted); cursor: pointer; padding: 0.1rem 0.4rem; font-size: 0.8rem;
+}
+.panel-close:hover { color: var(--text); border-color: var(--accent); }
+.panel-total { margin: 0; font-size: 1.3rem; color: var(--white); font-family: var(--font-display); }
+.panel-total span { font-size: 0.75rem; color: var(--muted); font-family: var(--font-body); }
+.panel-bar-row { display: flex; align-items: center; gap: 0.5rem; margin: 0.2rem 0; font-size: 0.75rem; }
+.panel-bar-label { flex: 0 0 7.2rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.panel-bar-track { flex: 1; height: 0.45rem; background: var(--panel-2); border-radius: 999px; overflow: hidden; }
+.panel-bar-fill { display: block; height: 100%; background: var(--accent-grad); border-radius: 999px; }
+.panel-bar-value { flex: 0 0 4.2rem; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.panel-drug-list { list-style: none; margin: 0; padding: 0; font-size: 0.78rem; }
+.panel-drug-list li {
+  display: flex; justify-content: space-between; gap: 0.75rem;
+  padding: 0.18rem 0; border-bottom: 1px dashed var(--border-soft);
+}
+.panel-drug-list li b { color: var(--white); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.panel-trend { display: flex; align-items: flex-end; gap: 0.45rem; height: 4.2rem; padding-top: 0.3rem; }
+.panel-trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; height: 100%; justify-content: flex-end; }
+.panel-trend-bar { display: block; width: 100%; background: var(--accent-grad); border-radius: 0.2rem 0.2rem 0 0; min-height: 2px; }
+.panel-trend-year { font-size: 0.65rem; color: var(--muted); }
+.panel-source { margin-top: 0.8rem; font-size: 0.7rem; }

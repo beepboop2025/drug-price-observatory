@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { geoMercator } from 'd3-geo'
-import topology from 'world-atlas/countries-110m.json'
+import topology from '../data/countries-ind.json'
 import { COUNTRY_CENTROIDS, PRECURSORS } from '../data/flows'
 import { useData } from '../lib/dataStore'
 import { explainMyanmar } from '../lib/explain'

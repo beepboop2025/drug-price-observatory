@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { geoEqualEarth } from 'd3-geo'
-import topology from 'world-atlas/countries-110m.json'
+import topology from '../data/countries-ind.json'
 import { PRECURSORS, COUNTRY_CENTROIDS } from '../data/flows'
 import { useData } from '../lib/dataStore'
 import { explainFlows } from '../lib/explain'
 import { arcPath, countriesFromTopology, graticulePath, pathForGeometry, projectedPoint } from '../lib/mapSvg'
 import Explainer from './Explainer'
+import SeizureGlobe from './SeizureGlobe'
 import type { FlowRecord } from '../types'
 
 // Map a seized quantity to a stroke width so the eye reads volume directly.
@@ -31,7 +32,34 @@ const MAP_WIDTH = 800
 const MAP_HEIGHT = 440
 const countries = countriesFromTopology(topology)
 
+/**
+ * Map tab: interactive seizure globe (official UNODC data) by default, with
+ * the original flat precursor-corridor view kept as a secondary mode.
+ */
 export default function WorldMap() {
+  const [view, setView] = useState<'globe' | 'corridors'>('globe')
+  return (
+    <section>
+      <div className="view-switch" role="tablist" aria-label="Map view">
+        <button
+          className={`chip ${view === 'globe' ? 'active' : ''}`}
+          onClick={() => setView('globe')}
+        >
+          🌐 Seizure globe (official)
+        </button>
+        <button
+          className={`chip ${view === 'corridors' ? 'active' : ''}`}
+          onClick={() => setView('corridors')}
+        >
+          🗺 Precursor corridors (illustrative)
+        </button>
+      </div>
+      {view === 'globe' ? <SeizureGlobe /> : <CorridorMap />}
+    </section>
+  )
+}
+
+function CorridorMap() {
   const { flowRecords } = useData()
   const [precursor, setPrecursor] = useState('all')
   const [yearIdx, setYearIdx] = useState(0)
