@@ -7,7 +7,14 @@
 // Keep these pure + string-returning so they can be tested and, later, localised.
 
 import { affordabilityDays } from './metrics'
-import type { PriceRecord, FlowRecord, MmRegionRecord, MmFlowRecord } from '../types'
+import type {
+  FlowRecord,
+  MmConflictEventRecord,
+  MmFlowRecord,
+  MmPrecursorFlowRecord,
+  MmRegionRecord,
+  PriceRecord,
+} from '../types'
 
 const fmtUsd = (v: number | null): string => (v == null ? 'n/a' : `$${Math.round(v).toLocaleString()}`)
 
@@ -75,6 +82,8 @@ export function explainMyanmar(
   flows: MmFlowRecord[] | null | undefined,
   year: number | undefined,
   labelOf: (id: string) => string,
+  conflictEvents?: MmConflictEventRecord[] | null,
+  precursorFlows?: MmPrecursorFlowRecord[] | null,
 ): string | null {
   const parts: string[] = []
   if (regionRows && regionRows.length) {
@@ -88,6 +97,23 @@ export function explainMyanmar(
     const top = [...flows].sort((a, b) => b.quantityKg - a.quantityKg)[0]
     parts.push(
       `The busiest tracked route carries ${humanizeMass(top.quantityKg)} of ${top.drug.toLowerCase()} from ${labelOf(top.from)} toward ${labelOf(top.to)}.`,
+    )
+  }
+  if (conflictEvents && conflictEvents.length) {
+    const topConflict = [...conflictEvents].sort((a, b) => b.intensity - a.intensity)[0]
+    parts.push(
+      `The civil-war overlay shows the strongest conflict pressure in ${labelOf(topConflict.region)} (${topConflict.actor}, ${topConflict.intensity}/100).`,
+    )
+  }
+  if (precursorFlows && precursorFlows.length) {
+    const total = precursorFlows.reduce((s, r) => s + r.quantityKg, 0)
+    const china = precursorFlows
+      .filter((r) => r.originCountry.toLowerCase() === 'china')
+      .reduce((s, r) => s + r.quantityKg, 0)
+    const share = total ? Math.round((china / total) * 100) : 0
+    const top = [...precursorFlows].sort((a, b) => b.quantityKg - a.quantityKg)[0]
+    parts.push(
+      `Inbound precursor reporting adds ${humanizeMass(total)} flowing toward Myanmar regions; China accounts for ${share}% of the shown volume, led by ${top.originCountry} → ${labelOf(top.to)}.`,
     )
   }
   return parts.length ? parts.join(' ') : null

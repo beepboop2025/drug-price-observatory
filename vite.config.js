@@ -6,6 +6,6 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'node',
-    include: ['src/**/*.test.{js,ts}'],
+    include: ['src/**/*.test.{js,ts}', 'scripts/**/*.test.{js,ts,mjs}'],
   },
 })

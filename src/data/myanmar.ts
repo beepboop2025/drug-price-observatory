@@ -11,7 +11,13 @@
 // appears in published reports. NO lab sites, GPS points, routes, or chemistry.
 // =============================================================================
 
-import type { MmNode, MmRegionRecord, MmFlowRecord } from '../types'
+import type {
+  MmConflictEventRecord,
+  MmFlowRecord,
+  MmNode,
+  MmPrecursorFlowRecord,
+  MmRegionRecord,
+} from '../types'
 
 export const MM_REGIONS: MmNode[] = [
   { id: 'shan_north', label: 'Shan State (North)', lat: 23.2, lng: 98.0 },
@@ -38,6 +44,21 @@ export const mmCoord = (id: string): [number, number] | null => {
 }
 export const mmLabel = (id: string): string => NODE[id]?.label ?? id
 
+// Administrative-unit adjacency only (which region shares a border with which),
+// sourced from public administrative maps of Shan/Kachin/Kayah States — no
+// operational or sub-region-of-region granularity. Used to model geographic
+// spillover risk: a region with calm current indicators but a high-risk
+// neighbor deserves an early-warning flag, per spatial-diffusion conflict
+// research (armed-conflict spillover/contagion literature).
+export const MM_REGION_ADJACENCY: Record<string, string[]> = {
+  shan_north: ['shan_east', 'kachin'],
+  shan_east: ['shan_north', 'shan_south', 'wa'],
+  shan_south: ['shan_east', 'kayah'],
+  wa: ['shan_east'],
+  kachin: ['shan_north'],
+  kayah: ['shan_south'],
+}
+
 // opiumHa = opium poppy cultivation (hectares);
 // methIndex = relative synthetic-drug activity indicator (0–100, not a volume).
 export const MM_REGION_RECORDS: MmRegionRecord[] = [
@@ -56,12 +77,156 @@ export const MM_REGION_RECORDS: MmRegionRecord[] = [
 ]
 
 // Cross-border corridors: source region → border town → out of country.
+// sourceName/sourceUrl attribute each seizure figure to the reporting body —
+// same provenance standard as the conflict-pressure and precursor-inflow
+// layers — so outbound-corridor concentration and cross-source disagreement
+// checks can run on this evidence too.
 export const MM_FLOW_RECORDS: MmFlowRecord[] = [
-  { from: 'shan_north', to: 'muse',      year: 2020, quantityKg: 2400, drug: 'Methamphetamine' },
-  { from: 'shan_north', to: 'muse',      year: 2022, quantityKg: 4100, drug: 'Methamphetamine' },
-  { from: 'wa',         to: 'mekong',    year: 2022, quantityKg: 6800, drug: 'Methamphetamine' },
-  { from: 'shan_east',  to: 'tachileik', year: 2020, quantityKg: 3000, drug: 'Methamphetamine' },
-  { from: 'shan_east',  to: 'tachileik', year: 2022, quantityKg: 5200, drug: 'Methamphetamine' },
-  { from: 'shan_south', to: 'tachileik', year: 2022, quantityKg: 1800, drug: 'Methamphetamine' },
-  { from: 'kachin',     to: 'kachin_in', year: 2022, quantityKg: 700,  drug: 'Heroin' },
+  {
+    from: 'shan_north', to: 'muse', year: 2020, quantityKg: 2400, drug: 'Methamphetamine',
+    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+  },
+  {
+    from: 'shan_north', to: 'muse', year: 2022, quantityKg: 4100, drug: 'Methamphetamine',
+    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+  },
+  {
+    from: 'wa', to: 'mekong', year: 2022, quantityKg: 6800, drug: 'Methamphetamine',
+    sourceName: 'UNODC Mekong seizure reporting',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+  },
+  {
+    from: 'shan_east', to: 'tachileik', year: 2020, quantityKg: 3000, drug: 'Methamphetamine',
+    sourceName: 'UNODC Mekong seizure reporting',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+  },
+  {
+    from: 'shan_east', to: 'tachileik', year: 2022, quantityKg: 5200, drug: 'Methamphetamine',
+    sourceName: 'UNODC Mekong seizure reporting',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+  },
+  {
+    from: 'shan_south', to: 'tachileik', year: 2022, quantityKg: 1800, drug: 'Methamphetamine',
+    sourceName: 'ACLED Myanmar event data',
+    sourceUrl: 'https://acleddata.com/asia-pacific/myanmar/',
+  },
+  {
+    from: 'kachin', to: 'kachin_in', year: 2022, quantityKg: 700, drug: 'Heroin',
+    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+  },
+]
+
+// Conflict-pressure layer: public, aggregate observations only. "intensity" is a
+// 0-100 analytical index built from source-coded event counts/severity, not a claim
+// about exact battlefield activity.
+export const MM_CONFLICT_EVENTS: MmConflictEventRecord[] = [
+  {
+    region: 'shan_north',
+    year: 2022,
+    actor: 'Myanmar military / border-aligned militias',
+    actorType: 'military',
+    eventType: 'territorial_control',
+    intensity: 78,
+    sourceName: 'International Crisis Group',
+    sourceUrl: 'https://www.crisisgroup.org/asia/south-east-asia/myanmar',
+  },
+  {
+    region: 'wa',
+    year: 2022,
+    actor: 'United Wa State Army-administered area',
+    actorType: 'eao',
+    eventType: 'territorial_control',
+    intensity: 62,
+    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+  },
+  {
+    region: 'shan_east',
+    year: 2022,
+    actor: 'Border armed groups and trafficking networks',
+    actorType: 'militia',
+    eventType: 'clash',
+    intensity: 70,
+    sourceName: 'ACLED Myanmar event data',
+    sourceUrl: 'https://acleddata.com/asia-pacific/myanmar/',
+  },
+  {
+    region: 'kachin',
+    year: 2022,
+    actor: 'Kachin conflict actors',
+    actorType: 'eao',
+    eventType: 'clash',
+    intensity: 48,
+    sourceName: 'ACLED Myanmar event data',
+    sourceUrl: 'https://acleddata.com/asia-pacific/myanmar/',
+  },
+  // Same actor as the 'wa' record above, reported operating in a
+  // *non-adjacent* region (shan_south is not in MM_REGION_ADJACENCY.wa).
+  // Reflects publicly reported UWSA-administered/influence pockets in
+  // southern Shan (e.g. Mong Hsat/Mongton townships) alongside the Wa Self-
+  // Administered Division proper — a case geographic-adjacency spillover
+  // can't catch but a shared-actor network signal can.
+  {
+    region: 'shan_south',
+    year: 2022,
+    actor: 'United Wa State Army-administered area',
+    actorType: 'eao',
+    eventType: 'territorial_control',
+    intensity: 40,
+    sourceName: 'International Crisis Group',
+    sourceUrl: 'https://www.crisisgroup.org/asia/south-east-asia/myanmar',
+  },
+]
+
+// Inbound precursor corridors feeding Myanmar production regions. These are
+// country/province-level seizure/reporting records; they deliberately exclude
+// recipes, conversion ratios, lab sites, or operational route detail.
+export const MM_PRECURSOR_FLOWS: MmPrecursorFlowRecord[] = [
+  {
+    originCountry: 'China',
+    transitCountry: null,
+    to: 'shan_north',
+    year: 2022,
+    precursor: 'meth_pre_precursors',
+    quantityKg: 4200,
+    sourceName: 'INCB Precursors report',
+    sourceUrl: 'https://www.incb.org/incb/en/precursors/',
+    confidence: 'reported',
+  },
+  {
+    originCountry: 'China',
+    transitCountry: 'Laos',
+    to: 'wa',
+    year: 2022,
+    precursor: 'meth_precursors',
+    quantityKg: 3600,
+    sourceName: 'UNODC Synthetic Drugs in East and Southeast Asia',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+    confidence: 'estimated',
+  },
+  {
+    originCountry: 'India',
+    transitCountry: null,
+    to: 'kachin',
+    year: 2022,
+    precursor: 'heroin_precursors',
+    quantityKg: 900,
+    sourceName: 'INCB Precursors report',
+    sourceUrl: 'https://www.incb.org/incb/en/precursors/',
+    confidence: 'reported',
+  },
+  {
+    originCountry: 'Thailand',
+    transitCountry: null,
+    to: 'shan_east',
+    year: 2022,
+    precursor: 'meth_precursors',
+    quantityKg: 1700,
+    sourceName: 'UNODC Mekong seizure reporting',
+    sourceUrl: 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html',
+    confidence: 'reported',
+  },
 ]

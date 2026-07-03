@@ -12,6 +12,8 @@ const FIELDS: { key: keyof LoadBundle; label: string }[] = [
   { key: 'mmBorderNodes', label: 'Myanmar border nodes' },
   { key: 'mmRegionRecords', label: 'Myanmar region stats' },
   { key: 'mmFlows', label: 'Myanmar flows' },
+  { key: 'mmConflictEvents', label: 'Myanmar civil-war events' },
+  { key: 'mmPrecursorFlows', label: 'Myanmar precursor inflows' },
 ]
 
 export default function DataLoader() {

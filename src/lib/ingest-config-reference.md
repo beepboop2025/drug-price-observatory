@@ -63,10 +63,46 @@
 | `year`        | `Year`, `Year of Seizure`, `Year of Report`, `Reporting Year`           |
 | `quantityKg`  | `Quantity (kg)`, `Quantity Kg`, `Weight (kg)`, `Seized (kg)`            |
 | `drug`        | `Drug`, `Substance`, `Drug Type`, `Drug group`                          |
+| `sourceName`  | `Source name`, `Source`, `Publisher`, `Report` (optional)               |
+| `sourceUrl`   | `Source URL`, `URL`, `Link` (optional)                                  |
+
+`sourceName`/`sourceUrl` are optional — unlike the conflict-events and
+precursor-inflow datasets below, where they're required — to stay
+backward-compatible with pre-existing flow CSVs that predate provenance
+tracking. Populate them for any newly ingested outbound-flow record so
+corridor-concentration and cross-source disagreement checks can run on it.
+
+## Myanmar civil-war events (`parseMyanmarConflictEvents`)
+
+| Canonical key | Plausible source column names                                           |
+|---------------|--------------------------------------------------------------------------|
+| `region`      | `Region`, `Region ID`, `Area`, `Subregion`                              |
+| `year`        | `Year`, `Year of Report`, `Reporting Year`                              |
+| `actor`       | `Actor`, `Armed actor`, `Party`, `Conflict actor`, `Group`              |
+| `actorType`   | `Actor type`, `Party type`, `Group type`                                |
+| `eventType`   | `Event type`, `Incident type`, `Event`                                  |
+| `intensity`   | `Intensity`, `Conflict intensity`, `Conflict index`, `Pressure index`   |
+| `sourceName`  | `Source name`, `Source`, `Publisher`, `Report`                          |
+| `sourceUrl`   | `Source URL`, `URL`, `Link`                                             |
+
+## Myanmar precursor inflows (`parseMyanmarPrecursorFlows`)
+
+| Canonical key    | Plausible source column names                                        |
+|------------------|------------------------------------------------------------------------|
+| `originCountry`  | `Origin country`, `Sender country`, `Source country`                  |
+| `transitCountry` | `Transit country`, `Via country`                                      |
+| `to`             | `To`, `To ID`, `To Region`                                            |
+| `year`           | `Year`, `Year of Seizure`, `Year of Report`, `Reporting Year`         |
+| `precursor`      | `Precursor`, `Chemical`, `Substance group`                            |
+| `quantityKg`     | `Quantity (kg)`, `Quantity Kg`, `Weight (kg)`, `Seized (kg)`          |
+| `sourceName`     | `Source name`, `Source`, `Publisher`, `Report`                        |
+| `sourceUrl`      | `Source URL`, `URL`, `Link`                                           |
+| `confidence`     | `Confidence`, `Source confidence`, `Method`                           |
 
 ## Notes for mappers
 
 - Empty cells, `-`, and `n/a` in a purity column are coerced to `null`.
 - Price and quantity columns are parsed as floats; negative values cause the row to be skipped with a warning.
 - `purityPct` and `methIndex` are clamped to the range `[0, 100]`.
+- Myanmar conflict `intensity` is clamped to `[0, 100]`.
 - Only the first matching source column is used per canonical key.

@@ -7,6 +7,8 @@ import {
   parseMyanmarBorderNodes,
   parseMyanmarRegionRecords,
   parseMyanmarFlows,
+  parseMyanmarConflictEvents,
+  parseMyanmarPrecursorFlows,
 } from './ingest';
 
 describe('parsePrices', () => {
@@ -264,6 +266,96 @@ shan_north,wa,2023,500,Methamphetamine,secret trail`;
       year: 2023,
       quantityKg: 500,
       drug: 'Methamphetamine',
+    });
+  });
+
+  it('parses optional sourceName/sourceUrl columns when present', () => {
+    const csv = `from,to,year,quantityKg,drug,sourceName,sourceUrl
+shan_north,wa,2023,500,Methamphetamine,UNODC,https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html`;
+
+    const { records, warnings } = parseMyanmarFlows(csv);
+
+    assert.equal(records.length, 1);
+    assert.equal(warnings.length, 0);
+    assert.equal(records[0].sourceName, 'UNODC');
+    assert.equal(records[0].sourceUrl, 'https://www.unodc.org/roseap/en/what-we-do/toc/synthetic-drugs.html');
+  });
+
+  it('omits sourceName/sourceUrl keys entirely when the columns are absent (backward compatible)', () => {
+    const csv = `from,to,year,quantityKg,drug
+shan_north,wa,2023,500,Methamphetamine`;
+
+    const { records } = parseMyanmarFlows(csv);
+
+    assert.equal(records.length, 1);
+    assert.equal('sourceName' in records[0], false);
+    assert.equal('sourceUrl' in records[0], false);
+  });
+
+  describe('parseMyanmarConflictEvents', () => {
+    it('parses a conflict event and normalizes actor/event types', () => {
+      const csv = `region,year,actor,actorType,eventType,intensity,sourceName,sourceUrl
+  Shan North,2023,Border militias,militia,territory,120,ACLED,https://acleddata.com/asia-pacific/myanmar/`;
+
+      const { records, warnings } = parseMyanmarConflictEvents(csv, new Set(['shan_north']));
+
+      assert.equal(records.length, 1);
+      assert.equal(warnings.length, 0);
+      assert.deepEqual(records[0], {
+        region: 'shan_north',
+        year: 2023,
+        actor: 'Border militias',
+        actorType: 'militia',
+        eventType: 'territorial_control',
+        intensity: 100,
+        sourceName: 'ACLED',
+        sourceUrl: 'https://acleddata.com/asia-pacific/myanmar/',
+      });
+    });
+
+    it('keeps unknown regions but reports them', () => {
+      const csv = `region,year,actor,actorType,eventType,intensity,sourceName,sourceUrl
+  Unknown,2023,Group,other,clash,20,Source,https://example.org`;
+
+      const { records, warnings } = parseMyanmarConflictEvents(csv, new Set(['shan_north']));
+
+      assert.equal(records.length, 1);
+      assert.equal(warnings.length, 1);
+      assert.ok(warnings[0].includes('unknown region id'));
+    });
+  });
+
+  describe('parseMyanmarPrecursorFlows', () => {
+    it('parses country-to-region precursor inflows', () => {
+      const csv = `originCountry,transitCountry,to,year,precursor,quantityKg,sourceName,sourceUrl,confidence
+  China,Laos,Wa,2023,meth_precursors,1200,INCB,https://www.incb.org/incb/en/precursors/,official`;
+
+      const { records, warnings } = parseMyanmarPrecursorFlows(csv, new Set(['wa']));
+
+      assert.equal(records.length, 1);
+      assert.equal(warnings.length, 0);
+      assert.deepEqual(records[0], {
+        originCountry: 'China',
+        transitCountry: 'Laos',
+        to: 'wa',
+        year: 2023,
+        precursor: 'meth_precursors',
+        quantityKg: 1200,
+        sourceName: 'INCB',
+        sourceUrl: 'https://www.incb.org/incb/en/precursors/',
+        confidence: 'official',
+      });
+    });
+
+    it('skips unknown precursor classes', () => {
+      const csv = `originCountry,to,year,precursor,quantityKg,sourceName,sourceUrl
+  China,wa,2023,unknown,1200,INCB,https://www.incb.org/incb/en/precursors/`;
+
+      const { records, warnings } = parseMyanmarPrecursorFlows(csv);
+
+      assert.equal(records.length, 0);
+      assert.equal(warnings.length, 1);
+      assert.ok(warnings[0].includes('unknown precursor'));
     });
   });
 });

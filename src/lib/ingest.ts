@@ -12,10 +12,15 @@ import type {
   MmNode,
   MmRegionRecord,
   MmFlowRecord,
+  MmConflictEventRecord,
+  MmPrecursorFlowRecord,
   ParseResult,
   Drug,
   PrecursorId,
   MyanmarDrug,
+  MyanmarConflictActorType,
+  MyanmarConflictEventType,
+  SourceConfidence,
 } from '../types'
 
 // =============================================================================
@@ -40,6 +45,37 @@ function isPrecursorId(v: string): v is PrecursorId {
 const VALID_MYANMAR_DRUGS = ['Methamphetamine', 'Heroin'] as const
 function isMyanmarDrug(v: string): v is MyanmarDrug {
   return (VALID_MYANMAR_DRUGS as readonly string[]).includes(v)
+}
+
+const VALID_CONFLICT_ACTOR_TYPES = [
+  'military',
+  'eao',
+  'militia',
+  'resistance',
+  'criminal',
+  'state',
+  'unknown',
+] as const
+function isMyanmarConflictActorType(v: string): v is MyanmarConflictActorType {
+  return (VALID_CONFLICT_ACTOR_TYPES as readonly string[]).includes(v)
+}
+
+const VALID_CONFLICT_EVENT_TYPES = [
+  'clash',
+  'airstrike',
+  'territorial_control',
+  'ceasefire',
+  'sanction',
+  'seizure',
+  'other',
+] as const
+function isMyanmarConflictEventType(v: string): v is MyanmarConflictEventType {
+  return (VALID_CONFLICT_EVENT_TYPES as readonly string[]).includes(v)
+}
+
+const VALID_SOURCE_CONFIDENCE = ['official', 'reported', 'estimated'] as const
+function isSourceConfidence(v: string): v is SourceConfidence {
+  return (VALID_SOURCE_CONFIDENCE as readonly string[]).includes(v)
 }
 
 // =============================================================================
@@ -102,6 +138,15 @@ export const CONFIG: Record<string, string[]> = {
     'seizure kg',
     'volume kg',
   ],
+  actor: ['actor', 'armed actor', 'party', 'conflict actor', 'group'],
+  actorType: ['actor type', 'actor_type', 'party type', 'group type'],
+  eventType: ['event type', 'event_type', 'incident type', 'event'],
+  intensity: ['intensity', 'conflict intensity', 'conflict index', 'pressure index'],
+  sourceName: ['source name', 'source_name', 'source', 'publisher', 'report'],
+  sourceUrl: ['source url', 'source_url', 'url', 'link'],
+  originCountry: ['origin country', 'origin_country', 'sender country', 'source country', 'country of origin'],
+  transitCountry: ['transit country', 'transit_country', 'via country', 'transit'],
+  confidence: ['confidence', 'source confidence', 'method'],
   opiumHa: [
     'opium ha',
     'opium_ha',
@@ -288,6 +333,26 @@ function normalizeMyanmarDrug(value: unknown): string | null {
     return 'Heroin'
   }
   return null
+}
+
+function normalizeActorType(value: unknown): MyanmarConflictActorType {
+  const raw = toSnakeCaseSlug(value) ?? 'unknown'
+  if (raw === 'ethnic_armed_organization' || raw === 'ethnic_armed_group') return 'eao'
+  if (raw === 'resistance_group' || raw === 'pdf') return 'resistance'
+  if (raw === 'state_actor' || raw === 'government') return 'state'
+  return isMyanmarConflictActorType(raw) ? raw : 'unknown'
+}
+
+function normalizeEventType(value: unknown): MyanmarConflictEventType {
+  const raw = toSnakeCaseSlug(value) ?? 'other'
+  if (raw === 'territory' || raw === 'territorial' || raw === 'control') return 'territorial_control'
+  if (raw === 'battle' || raw === 'armed_clash') return 'clash'
+  return isMyanmarConflictEventType(raw) ? raw : 'other'
+}
+
+function normalizeConfidence(value: unknown): SourceConfidence {
+  const raw = toSnakeCaseSlug(value) ?? 'reported'
+  return isSourceConfidence(raw) ? raw : 'reported'
 }
 
 // =============================================================================
@@ -615,7 +680,144 @@ export function parseMyanmarFlows(
       }
     }
 
-    records.push({ from, to, year, quantityKg, drug: drugRaw })
+    // sourceName/sourceUrl are optional here (unlike conflict events and
+    // precursor flows) to stay backward-compatible with existing flow CSVs
+    // that predate provenance tracking; populate them when the columns exist.
+    const sourceName = coerceString(getField(row, headerMap, 'sourceName')) || undefined
+    const sourceUrl = coerceString(getField(row, headerMap, 'sourceUrl')) || undefined
+
+    records.push({ from, to, year, quantityKg, drug: drugRaw, ...(sourceName ? { sourceName } : {}), ...(sourceUrl ? { sourceUrl } : {}) })
+  })
+
+  return { records, warnings }
+}
+
+/**
+ * Parse Myanmar civil-war / armed-actor event records at region-year grain.
+ */
+export function parseMyanmarConflictEvents(
+  csv: string,
+  knownIds?: Iterable<string>
+): ParseResult<MmConflictEventRecord> {
+  const records: MmConflictEventRecord[] = []
+  const warnings: string[] = []
+  const { headers, rows } = parseCsv(csv)
+  const headerMap = buildHeaderMap(headers, CONFIG)
+  const knownSet = knownIds ? new Set<string>(knownIds) : null
+
+  const required = ['region', 'year', 'actor', 'eventType', 'intensity', 'sourceName', 'sourceUrl']
+  const missing = required.filter((field) => !(field in headerMap))
+  if (missing.length > 0) {
+    warnings.push(
+      `Unrecognized Myanmar conflict events CSV layout: missing columns ${missing.join(', ')}. No records parsed.`
+    )
+    return { records, warnings }
+  }
+
+  rows.forEach((row, index) => {
+    const lineNo = index + 2
+    const region = toSnakeCaseSlug(getField(row, headerMap, 'region'))
+    const year = coerceInt(getField(row, headerMap, 'year'))
+    const actor = coerceString(getField(row, headerMap, 'actor'))
+    const actorType = normalizeActorType(getField(row, headerMap, 'actorType'))
+    const eventType = normalizeEventType(getField(row, headerMap, 'eventType'))
+    const intensity = coerceIndex(getField(row, headerMap, 'intensity'))
+    const sourceName = coerceString(getField(row, headerMap, 'sourceName'))
+    const sourceUrl = coerceString(getField(row, headerMap, 'sourceUrl'))
+
+    if (!region || year === null || !actor || intensity === null || !sourceName || !sourceUrl) {
+      warnings.push(`Row ${lineNo}: skipped due to missing required fields`)
+      return
+    }
+
+    if (knownSet && !knownSet.has(region)) {
+      warnings.push(`Row ${lineNo}: unknown region id ${region}`)
+    }
+
+    records.push({ region, year, actor, actorType, eventType, intensity, sourceName, sourceUrl })
+  })
+
+  return { records, warnings }
+}
+
+/**
+ * Parse country-to-Myanmar precursor inflows at source-country / destination-region grain.
+ */
+export function parseMyanmarPrecursorFlows(
+  csv: string,
+  knownIds?: Iterable<string>
+): ParseResult<MmPrecursorFlowRecord> {
+  const records: MmPrecursorFlowRecord[] = []
+  const warnings: string[] = []
+  const { headers, rows } = parseCsv(csv)
+  const headerMap = buildHeaderMap(headers, CONFIG)
+  if (!('originCountry' in headerMap) && 'origin' in headerMap) {
+    headerMap.originCountry = headerMap.origin
+  }
+  if (!('transitCountry' in headerMap) && 'transit' in headerMap) {
+    headerMap.transitCountry = headerMap.transit
+  }
+  const knownSet = knownIds ? new Set<string>(knownIds) : null
+
+  const required = ['originCountry', 'to', 'year', 'precursor', 'quantityKg', 'sourceName', 'sourceUrl']
+  const missing = required.filter((field) => !(field in headerMap))
+  if (missing.length > 0) {
+    warnings.push(
+      `Unrecognized Myanmar precursor flows CSV layout: missing columns ${missing.join(', ')}. No records parsed.`
+    )
+    return { records, warnings }
+  }
+
+  rows.forEach((row, index) => {
+    const lineNo = index + 2
+    const originCountry = coerceString(getField(row, headerMap, 'originCountry'))
+    const transitCountry = coerceString(getField(row, headerMap, 'transitCountry'))
+    const to = toSnakeCaseSlug(getField(row, headerMap, 'to'))
+    const year = coerceInt(getField(row, headerMap, 'year'))
+    const precursorRaw = normalizePrecursor(getField(row, headerMap, 'precursor'))
+    const quantityKg = coerceNumber(getField(row, headerMap, 'quantityKg'))
+    const sourceName = coerceString(getField(row, headerMap, 'sourceName'))
+    const sourceUrl = coerceString(getField(row, headerMap, 'sourceUrl'))
+    const confidence = normalizeConfidence(getField(row, headerMap, 'confidence'))
+
+    if (
+      !originCountry ||
+      !to ||
+      year === null ||
+      !precursorRaw ||
+      quantityKg === null ||
+      !sourceName ||
+      !sourceUrl
+    ) {
+      warnings.push(`Row ${lineNo}: skipped due to missing required fields`)
+      return
+    }
+
+    if (!isPrecursorId(precursorRaw)) {
+      warnings.push(`Row ${lineNo}: skipped due to unknown precursor`)
+      return
+    }
+
+    if (quantityKg < 0) {
+      warnings.push(`Row ${lineNo}: skipped due to negative quantityKg`)
+      return
+    }
+
+    if (knownSet && !knownSet.has(to)) {
+      warnings.push(`Row ${lineNo}: unknown to id ${to}`)
+    }
+
+    records.push({
+      originCountry,
+      transitCountry,
+      to,
+      year,
+      precursor: precursorRaw,
+      quantityKg,
+      sourceName,
+      sourceUrl,
+      confidence,
+    })
   })
 
   return { records, warnings }
