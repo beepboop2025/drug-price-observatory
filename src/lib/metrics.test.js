@@ -5,10 +5,13 @@ import {
   latestYoYChange,
   purityAdjustedPrice,
 } from './metrics'
+import { GDP_PER_CAPITA_USD } from '../data/prices'
 
 describe('dailyIncomeUsd(iso3)', () => {
   it('returns annual GDP per capita divided by 365 for a known country', () => {
-    assert.equal(dailyIncomeUsd('USA'), 70000 / 365)
+    // Derived from the bundled table, not a magic number, so refreshing the
+    // World Bank figures (fetch-gdp.mjs) can't silently break this test.
+    assert.equal(dailyIncomeUsd('USA'), GDP_PER_CAPITA_USD.USA / 365)
   })
 
   it('returns null for an unknown iso3', () => {
@@ -18,7 +21,7 @@ describe('dailyIncomeUsd(iso3)', () => {
 
 describe('affordabilityDays(priceUsd, iso3)', () => {
   it('returns the price divided by daily income for a known country', () => {
-    const expected = 100 / (70000 / 365)
+    const expected = 100 / (GDP_PER_CAPITA_USD.USA / 365)
     assert.equal(affordabilityDays(100, 'USA'), expected)
   })
 

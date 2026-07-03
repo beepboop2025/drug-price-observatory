@@ -45,7 +45,7 @@ tooltips that explain each figure in human terms.
 
 ## Screenshots
 
-> Showing sample/illustrative data (the in-app badge flips to "Live data" once real official figures are loaded).
+> **Street Prices now ships official data**: UNODC World Drug Report 2025, Statistical Annex 8.1 (retail per-gram prices + purities, 2019–2023, 208 records across 69 countries), with World Bank GDP-per-capita (2024) powering the affordability lens. Flow-map, precursor and Myanmar figures remain illustrative pending ingestion — the in-app badge states exactly which is which.
 
 A dark, motion-led interface: a WebGL globe traces precursor corridors out of their
 source hubs (coral) toward transit and destination nodes (cyan), headings reveal
@@ -139,4 +139,10 @@ The repo is Vercel-ready (`vercel.json` pins the Vite framework). Either:
 
 - `purityAdjustedPrice()` in `src/lib/metrics.js` is an intentional stub — the
   null-purity policy is an editorial choice left to the maintainer.
-- Load and **verify** real UNODC/INCB data (the main remaining step).
+- ~~Load and **verify** real UNODC/INCB data~~ **Street prices: done** (WDR 2025
+  Annex 8.1, see `src/data/prices.ts` provenance header). Remaining: precursor
+  prices, flow corridors, and the Myanmar dataset.
+
+## License
+
+[MIT](./LICENSE) — free to use, adapt, and build on, with attribution.

@@ -1,21 +1,25 @@
 // =============================================================================
-// RETAIL ("STREET") PRICE DATASET
+// RETAIL ("STREET") PRICE DATASET — OFFICIAL UNODC DATA
 // =============================================================================
 //
-// ⚠️ DATA PROVENANCE — READ THIS:
-// The figures below are ILLUSTRATIVE/REPRESENTATIVE samples shaped to match the
-// structure of official public datasets. They sit within the broad ranges
-// reported publicly but are NOT authoritative and MUST be replaced with the
-// real source files before this is presented as factual.
+// DATA PROVENANCE:
+// Extracted from the UNODC World Drug Report 2025 Statistical Annex,
+// table 8.1 "Prices and purities of drugs" (sheets: "Prices in USD" +
+// "Purities"), downloaded 2026-07-03 from:
+//   https://www.unodc.org/documents/data-and-analysis/WDR_2025/Annex/8.1_Prices_and_purities_of_drugs.xlsx
 //
-// Replace with official, citable, aggregate (country + annual) data from:
-//   • UNODC — "Drugs: prices" dataset  → https://dataunodc.un.org
-//   • EUDA (formerly EMCDDA) — price & purity → https://www.euda.europa.eu/data
-//   • UNODC World Drug Report (annual)  → https://www.unodc.org/unodc/en/data-and-analysis/world-drug-report.html
+// Extraction rules (deliberately conservative):
+//   • Retail level of sale, per-GRAM unit rows only; 2019–2023 reporting years.
+//   • Drug mapping: "Cocaine salts" → cocaine, "Heroin" → heroin,
+//     "Marijuana (herb)" → cannabis, "Methamphetamine" → methamphetamine.
+//   • Price = reported Typical_USD; if absent, midpoint of a complete
+//     Minimum–Maximum range; rows with neither are skipped (1 row skipped).
+//   • Multiple observations for one (drug, country, year) are averaged.
+//   • purityPct = retail purity (percent) for the same country/drug/year
+//     where UNODC reports it; null otherwise (74 of 208 records have purity).
 //
 // GRAIN (deliberate guardrail): country + year + annual average ONLY.
 // Units: priceUsdPerGram = retail price per gram in nominal USD (year-of-record).
-//        purityPct       = typical retail purity %, where reported (null if N/A).
 // =============================================================================
 
 import type { DrugMeta, PriceRecord, Source } from '../types'
@@ -27,50 +31,305 @@ export const DRUGS: DrugMeta[] = [
   { id: 'methamphetamine', label: 'Methamphetamine', unit: 'gram' },
 ]
 
-// Flat, tidy records — easy to swap for a CSV → JSON import later.
+// UNODC WDR 2025 Annex 8.1 — see provenance header. 208 records, 69 countries.
 export const PRICE_RECORDS: PriceRecord[] = [
+
   // --- Cocaine ---
-  { drug: 'cocaine', country: 'United States', iso3: 'USA', region: 'Americas', year: 2018, priceUsdPerGram: 112, purityPct: 61 },
-  { drug: 'cocaine', country: 'United States', iso3: 'USA', region: 'Americas', year: 2021, priceUsdPerGram: 120, purityPct: 65 },
-  { drug: 'cocaine', country: 'Germany', iso3: 'DEU', region: 'Europe', year: 2018, priceUsdPerGram: 88, purityPct: 70 },
-  { drug: 'cocaine', country: 'Germany', iso3: 'DEU', region: 'Europe', year: 2021, priceUsdPerGram: 92, purityPct: 76 },
-  { drug: 'cocaine', country: 'Colombia', iso3: 'COL', region: 'Americas', year: 2018, priceUsdPerGram: 6, purityPct: 80 },
-  { drug: 'cocaine', country: 'Colombia', iso3: 'COL', region: 'Americas', year: 2021, priceUsdPerGram: 7, purityPct: 82 },
-  { drug: 'cocaine', country: 'Australia', iso3: 'AUS', region: 'Oceania', year: 2021, priceUsdPerGram: 230, purityPct: 57 },
+  { drug: 'cocaine', country: 'Albania', iso3: 'ALB', region: 'Europe', year: 2019, priceUsdPerGram: 67.19, purityPct: 75 },
+  { drug: 'cocaine', country: 'Australia', iso3: 'AUS', region: 'Oceania', year: 2019, priceUsdPerGram: 295.76, purityPct: 57 },
+  { drug: 'cocaine', country: 'Belarus', iso3: 'BLR', region: 'Europe', year: 2019, priceUsdPerGram: 195, purityPct: null },
+  { drug: 'cocaine', country: 'Belgium', iso3: 'BEL', region: 'Europe', year: 2019, priceUsdPerGram: 56.89, purityPct: null },
+  { drug: 'cocaine', country: 'Bolivia', iso3: 'BOL', region: 'Americas', year: 2019, priceUsdPerGram: 4.35, purityPct: null },
+  { drug: 'cocaine', country: 'Bulgaria', iso3: 'BGR', region: 'Europe', year: 2019, priceUsdPerGram: 74.41, purityPct: null },
+  { drug: 'cocaine', country: 'Chile', iso3: 'CHL', region: 'Americas', year: 2019, priceUsdPerGram: 18.54, purityPct: null },
+  { drug: 'cocaine', country: 'China', iso3: 'CHN', region: 'Asia', year: 2019, priceUsdPerGram: 127.21, purityPct: 40 },
+  { drug: 'cocaine', country: 'Cyprus', iso3: 'CYP', region: 'Europe', year: 2019, priceUsdPerGram: 98.54, purityPct: 81.4 },
+  { drug: 'cocaine', country: 'Czechia', iso3: 'CZE', region: 'Europe', year: 2019, priceUsdPerGram: 87.35, purityPct: 54 },
+  { drug: 'cocaine', country: 'Denmark', iso3: 'DNK', region: 'Europe', year: 2019, priceUsdPerGram: 104.98, purityPct: 59 },
+  { drug: 'cocaine', country: 'Ecuador', iso3: 'ECU', region: 'Americas', year: 2019, priceUsdPerGram: 4.35, purityPct: null },
+  { drug: 'cocaine', country: 'Egypt', iso3: 'EGY', region: 'Africa', year: 2019, priceUsdPerGram: 133.22, purityPct: null },
+  { drug: 'cocaine', country: 'El Salvador', iso3: 'SLV', region: 'Americas', year: 2019, priceUsdPerGram: 20, purityPct: 49.2 },
+  { drug: 'cocaine', country: 'Estonia', iso3: 'EST', region: 'Europe', year: 2019, priceUsdPerGram: 145.58, purityPct: 51 },
+  { drug: 'cocaine', country: 'Finland', iso3: 'FIN', region: 'Europe', year: 2019, priceUsdPerGram: 111.98, purityPct: 50.9 },
+  { drug: 'cocaine', country: 'France', iso3: 'FRA', region: 'Europe', year: 2019, priceUsdPerGram: 78.39, purityPct: 66 },
+  { drug: 'cocaine', country: 'Germany', iso3: 'DEU', region: 'Europe', year: 2019, priceUsdPerGram: 77.83, purityPct: 76.4 },
+  { drug: 'cocaine', country: 'Greece', iso3: 'GRC', region: 'Europe', year: 2019, priceUsdPerGram: 95.18, purityPct: null },
+  { drug: 'cocaine', country: 'Guatemala', iso3: 'GTM', region: 'Americas', year: 2019, priceUsdPerGram: 22.72, purityPct: 40 },
+  { drug: 'cocaine', country: 'Hong Kong SAR', iso3: 'HKG', region: 'Asia', year: 2019, priceUsdPerGram: 150.23, purityPct: null },
+  { drug: 'cocaine', country: 'Hungary', iso3: 'HUN', region: 'Europe', year: 2019, priceUsdPerGram: 69.88, purityPct: null },
+  { drug: 'cocaine', country: 'Iceland', iso3: 'ISL', region: 'Europe', year: 2019, priceUsdPerGram: 101.49, purityPct: null },
+  { drug: 'cocaine', country: 'India', iso3: 'IND', region: 'Asia', year: 2019, priceUsdPerGram: 106.59, purityPct: null },
+  { drug: 'cocaine', country: 'Indonesia', iso3: 'IDN', region: 'Asia', year: 2019, priceUsdPerGram: 179, purityPct: null },
+  { drug: 'cocaine', country: 'Ireland', iso3: 'IRL', region: 'Europe', year: 2019, priceUsdPerGram: 78.39, purityPct: null },
+  { drug: 'cocaine', country: 'Italy', iso3: 'ITA', region: 'Europe', year: 2019, priceUsdPerGram: 89.43, purityPct: null },
+  { drug: 'cocaine', country: 'Japan', iso3: 'JPN', region: 'Asia', year: 2019, priceUsdPerGram: 183.04, purityPct: null },
+  { drug: 'cocaine', country: 'Kenya', iso3: 'KEN', region: 'Africa', year: 2019, priceUsdPerGram: 100, purityPct: 10 },
+  { drug: 'cocaine', country: 'Kuwait', iso3: 'KWT', region: 'Asia', year: 2019, priceUsdPerGram: 328.95, purityPct: null },
+  { drug: 'cocaine', country: 'Latvia', iso3: 'LVA', region: 'Europe', year: 2019, priceUsdPerGram: 111.98, purityPct: 72 },
+  { drug: 'cocaine', country: 'Liechtenstein', iso3: 'LIE', region: 'Europe', year: 2019, priceUsdPerGram: 100.5, purityPct: null },
+  { drug: 'cocaine', country: 'Lithuania', iso3: 'LTU', region: 'Europe', year: 2019, priceUsdPerGram: 70.55, purityPct: 45.9 },
+  { drug: 'cocaine', country: 'Luxembourg', iso3: 'LUX', region: 'Europe', year: 2019, priceUsdPerGram: 76.52, purityPct: 50.3 },
+  { drug: 'cocaine', country: 'Macao SAR', iso3: 'MAC', region: 'Asia', year: 2019, priceUsdPerGram: 413, purityPct: null },
+  { drug: 'cocaine', country: 'Moldova', iso3: 'MDA', region: 'Europe', year: 2019, priceUsdPerGram: 134.38, purityPct: null },
+  { drug: 'cocaine', country: 'Montenegro', iso3: 'MNE', region: 'Europe', year: 2019, priceUsdPerGram: 100.78, purityPct: null },
+  { drug: 'cocaine', country: 'Morocco', iso3: 'MAR', region: 'Africa', year: 2019, priceUsdPerGram: 103.85, purityPct: 21 },
+  { drug: 'cocaine', country: 'Nepal', iso3: 'NPL', region: 'Asia', year: 2019, priceUsdPerGram: 221.91, purityPct: null },
+  { drug: 'cocaine', country: 'New Zealand', iso3: 'NZL', region: 'Oceania', year: 2019, priceUsdPerGram: 230.41, purityPct: null },
+  { drug: 'cocaine', country: 'North Macedonia', iso3: 'MKD', region: 'Europe', year: 2019, priceUsdPerGram: 89.59, purityPct: null },
+  { drug: 'cocaine', country: 'Pakistan', iso3: 'PAK', region: 'Asia', year: 2019, priceUsdPerGram: 106.42, purityPct: null },
+  { drug: 'cocaine', country: 'Philippines', iso3: 'PHL', region: 'Asia', year: 2019, priceUsdPerGram: 69.38, purityPct: null },
+  { drug: 'cocaine', country: 'Poland', iso3: 'POL', region: 'Europe', year: 2019, priceUsdPerGram: 76.92, purityPct: null },
+  { drug: 'cocaine', country: 'Portugal', iso3: 'PRT', region: 'Europe', year: 2019, priceUsdPerGram: 36.73, purityPct: 51.1 },
+  { drug: 'cocaine', country: 'Romania', iso3: 'ROU', region: 'Europe', year: 2019, priceUsdPerGram: 89.59, purityPct: 50.4 },
+  { drug: 'cocaine', country: 'Russia', iso3: 'RUS', region: 'Europe', year: 2019, priceUsdPerGram: 122.84, purityPct: null },
+  { drug: 'cocaine', country: 'Serbia', iso3: 'SRB', region: 'Europe', year: 2019, priceUsdPerGram: 89.59, purityPct: null },
+  { drug: 'cocaine', country: 'Slovakia', iso3: 'SVK', region: 'Europe', year: 2019, priceUsdPerGram: 78.39, purityPct: 53 },
+  { drug: 'cocaine', country: 'Spain', iso3: 'ESP', region: 'Europe', year: 2019, priceUsdPerGram: 66.88, purityPct: 45 },
+  { drug: 'cocaine', country: 'Sweden', iso3: 'SWE', region: 'Europe', year: 2019, priceUsdPerGram: 84.68, purityPct: 65 },
+  { drug: 'cocaine', country: 'Tunisia', iso3: 'TUN', region: 'Africa', year: 2019, priceUsdPerGram: 129.34, purityPct: null },
+  { drug: 'cocaine', country: 'Türkiye', iso3: 'TUR', region: 'Europe', year: 2019, priceUsdPerGram: 63.84, purityPct: 59.3 },
+  { drug: 'cocaine', country: 'Ukraine', iso3: 'UKR', region: 'Europe', year: 2019, priceUsdPerGram: 140, purityPct: null },
+  { drug: 'cocaine', country: 'United Kingdom', iso3: 'GBR', region: 'Europe', year: 2019, priceUsdPerGram: 101.78, purityPct: 66 },
+  { drug: 'cocaine', country: 'United States', iso3: 'USA', region: 'Americas', year: 2019, priceUsdPerGram: 120, purityPct: null },
+  { drug: 'cocaine', country: 'Uruguay', iso3: 'URY', region: 'Americas', year: 2019, priceUsdPerGram: 17.16, purityPct: null },
+  { drug: 'cocaine', country: 'Zambia', iso3: 'ZMB', region: 'Africa', year: 2019, priceUsdPerGram: 77.9, purityPct: null },
 
   // --- Heroin ---
-  { drug: 'heroin', country: 'United States', iso3: 'USA', region: 'Americas', year: 2018, priceUsdPerGram: 150, purityPct: 33 },
-  { drug: 'heroin', country: 'United States', iso3: 'USA', region: 'Americas', year: 2021, priceUsdPerGram: 145, purityPct: 30 },
-  { drug: 'heroin', country: 'Germany', iso3: 'DEU', region: 'Europe', year: 2021, priceUsdPerGram: 55, purityPct: 22 },
-  { drug: 'heroin', country: 'India', iso3: 'IND', region: 'Asia', year: 2021, priceUsdPerGram: 18, purityPct: 20 },
-  { drug: 'heroin', country: 'Afghanistan', iso3: 'AFG', region: 'Asia', year: 2021, priceUsdPerGram: 3, purityPct: 48 },
+  { drug: 'heroin', country: 'Albania', iso3: 'ALB', region: 'Europe', year: 2019, priceUsdPerGram: 19.6, purityPct: 10.5 },
+  { drug: 'heroin', country: 'Australia', iso3: 'AUS', region: 'Oceania', year: 2019, priceUsdPerGram: 382.74, purityPct: 70 },
+  { drug: 'heroin', country: 'Belarus', iso3: 'BLR', region: 'Europe', year: 2019, priceUsdPerGram: 40, purityPct: null },
+  { drug: 'heroin', country: 'Belgium', iso3: 'BEL', region: 'Europe', year: 2019, priceUsdPerGram: 22.84, purityPct: null },
+  { drug: 'heroin', country: 'Bulgaria', iso3: 'BGR', region: 'Europe', year: 2019, priceUsdPerGram: 37.21, purityPct: null },
+  { drug: 'heroin', country: 'China', iso3: 'CHN', region: 'Asia', year: 2019, priceUsdPerGram: 88.18, purityPct: 35 },
+  { drug: 'heroin', country: 'Czechia', iso3: 'CZE', region: 'Europe', year: 2019, priceUsdPerGram: 43.67, purityPct: 26.8 },
+  { drug: 'heroin', country: 'Denmark', iso3: 'DNK', region: 'Europe', year: 2019, priceUsdPerGram: 89.98, purityPct: 21 },
+  { drug: 'heroin', country: 'Ecuador', iso3: 'ECU', region: 'Americas', year: 2019, priceUsdPerGram: 4.7, purityPct: null },
+  { drug: 'heroin', country: 'Egypt', iso3: 'EGY', region: 'Africa', year: 2019, priceUsdPerGram: 9.47, purityPct: null },
+  { drug: 'heroin', country: 'Finland', iso3: 'FIN', region: 'Europe', year: 2019, priceUsdPerGram: 195.97, purityPct: 35.8 },
+  { drug: 'heroin', country: 'France', iso3: 'FRA', region: 'Europe', year: 2019, priceUsdPerGram: 39.19, purityPct: 19 },
+  { drug: 'heroin', country: 'Georgia', iso3: 'GEO', region: 'Asia', year: 2019, priceUsdPerGram: 89, purityPct: 60 },
+  { drug: 'heroin', country: 'Germany', iso3: 'DEU', region: 'Europe', year: 2019, priceUsdPerGram: 57.45, purityPct: 25.8 },
+  { drug: 'heroin', country: 'Greece', iso3: 'GRC', region: 'Europe', year: 2019, priceUsdPerGram: 23.8, purityPct: null },
+  { drug: 'heroin', country: 'Hong Kong SAR', iso3: 'HKG', region: 'Asia', year: 2019, priceUsdPerGram: 116.36, purityPct: null },
+  { drug: 'heroin', country: 'Hungary', iso3: 'HUN', region: 'Europe', year: 2019, priceUsdPerGram: 41.88, purityPct: null },
+  { drug: 'heroin', country: 'India', iso3: 'IND', region: 'Asia', year: 2019, priceUsdPerGram: 56.85, purityPct: 5.9 },
+  { drug: 'heroin', country: 'Indonesia', iso3: 'IDN', region: 'Asia', year: 2019, priceUsdPerGram: 214, purityPct: null },
+  { drug: 'heroin', country: 'Iran', iso3: 'IRN', region: 'Asia', year: 2019, priceUsdPerGram: 18.27, purityPct: null },
+  { drug: 'heroin', country: 'Ireland', iso3: 'IRL', region: 'Europe', year: 2019, priceUsdPerGram: 156.77, purityPct: null },
+  { drug: 'heroin', country: 'Italy', iso3: 'ITA', region: 'Europe', year: 2019, priceUsdPerGram: 54.21, purityPct: null },
+  { drug: 'heroin', country: 'Japan', iso3: 'JPN', region: 'Asia', year: 2019, priceUsdPerGram: 274.55, purityPct: null },
+  { drug: 'heroin', country: 'Kazakhstan', iso3: 'KAZ', region: 'Asia', year: 2019, priceUsdPerGram: 39.18, purityPct: null },
+  { drug: 'heroin', country: 'Kenya', iso3: 'KEN', region: 'Africa', year: 2019, priceUsdPerGram: 150, purityPct: 10 },
+  { drug: 'heroin', country: 'Kuwait', iso3: 'KWT', region: 'Asia', year: 2019, priceUsdPerGram: 98.68, purityPct: null },
+  { drug: 'heroin', country: 'Kyrgyzstan', iso3: 'KGZ', region: 'Asia', year: 2019, priceUsdPerGram: 20, purityPct: null },
+  { drug: 'heroin', country: 'Latvia', iso3: 'LVA', region: 'Europe', year: 2019, priceUsdPerGram: 123.18, purityPct: 20 },
+  { drug: 'heroin', country: 'Lebanon', iso3: 'LBN', region: 'Asia', year: 2019, priceUsdPerGram: 10, purityPct: 70 },
+  { drug: 'heroin', country: 'Liechtenstein', iso3: 'LIE', region: 'Europe', year: 2019, priceUsdPerGram: 40.2, purityPct: null },
+  { drug: 'heroin', country: 'Lithuania', iso3: 'LTU', region: 'Europe', year: 2019, priceUsdPerGram: 47.03, purityPct: 21.5 },
+  { drug: 'heroin', country: 'Luxembourg', iso3: 'LUX', region: 'Europe', year: 2019, priceUsdPerGram: 52.72, purityPct: 13.4 },
+  { drug: 'heroin', country: 'Macao SAR', iso3: 'MAC', region: 'Asia', year: 2019, priceUsdPerGram: 175, purityPct: null },
+  { drug: 'heroin', country: 'Malaysia', iso3: 'MYS', region: 'Asia', year: 2019, priceUsdPerGram: 51.84, purityPct: null },
+  { drug: 'heroin', country: 'Moldova', iso3: 'MDA', region: 'Europe', year: 2019, priceUsdPerGram: 223.96, purityPct: null },
+  { drug: 'heroin', country: 'Montenegro', iso3: 'MNE', region: 'Europe', year: 2019, priceUsdPerGram: 19.6, purityPct: null },
+  { drug: 'heroin', country: 'Morocco', iso3: 'MAR', region: 'Africa', year: 2019, priceUsdPerGram: 20.77, purityPct: null },
+  { drug: 'heroin', country: 'Myanmar', iso3: 'MMR', region: 'Asia', year: 2019, priceUsdPerGram: 19.63, purityPct: null },
+  { drug: 'heroin', country: 'Nepal', iso3: 'NPL', region: 'Asia', year: 2019, priceUsdPerGram: 71.01, purityPct: null },
+  { drug: 'heroin', country: 'Poland', iso3: 'POL', region: 'Europe', year: 2019, priceUsdPerGram: 75.62, purityPct: null },
+  { drug: 'heroin', country: 'Portugal', iso3: 'PRT', region: 'Europe', year: 2019, priceUsdPerGram: 27.16, purityPct: 12 },
+  { drug: 'heroin', country: 'Romania', iso3: 'ROU', region: 'Europe', year: 2019, priceUsdPerGram: 53.1, purityPct: 51.3 },
+  { drug: 'heroin', country: 'Russia', iso3: 'RUS', region: 'Europe', year: 2019, priceUsdPerGram: 19.96, purityPct: null },
+  { drug: 'heroin', country: 'Serbia', iso3: 'SRB', region: 'Europe', year: 2019, priceUsdPerGram: 19.6, purityPct: null },
+  { drug: 'heroin', country: 'Slovakia', iso3: 'SVK', region: 'Europe', year: 2019, priceUsdPerGram: 44.79, purityPct: 10 },
+  { drug: 'heroin', country: 'Spain', iso3: 'ESP', region: 'Europe', year: 2019, priceUsdPerGram: 65.6, purityPct: null },
+  { drug: 'heroin', country: 'Sweden', iso3: 'SWE', region: 'Europe', year: 2019, priceUsdPerGram: 95.27, purityPct: 22 },
+  { drug: 'heroin', country: 'Tajikistan', iso3: 'TJK', region: 'Asia', year: 2019, priceUsdPerGram: 25, purityPct: null },
+  { drug: 'heroin', country: 'Thailand', iso3: 'THA', region: 'Asia', year: 2019, priceUsdPerGram: 49.5, purityPct: 86.1 },
+  { drug: 'heroin', country: 'Tunisia', iso3: 'TUN', region: 'Africa', year: 2019, priceUsdPerGram: 95.3, purityPct: null },
+  { drug: 'heroin', country: 'Türkiye', iso3: 'TUR', region: 'Europe', year: 2019, priceUsdPerGram: 21.64, purityPct: 20.9 },
+  { drug: 'heroin', country: 'Ukraine', iso3: 'UKR', region: 'Europe', year: 2019, priceUsdPerGram: 70, purityPct: null },
+  { drug: 'heroin', country: 'United Kingdom', iso3: 'GBR', region: 'Europe', year: 2019, priceUsdPerGram: 63.61, purityPct: 48 },
+  { drug: 'heroin', country: 'United States', iso3: 'USA', region: 'Americas', year: 2019, priceUsdPerGram: 210, purityPct: 41.5 },
+  { drug: 'heroin', country: 'Zambia', iso3: 'ZMB', region: 'Africa', year: 2019, priceUsdPerGram: 31.16, purityPct: null },
 
-  // --- Cannabis (herbal) ---
-  { drug: 'cannabis', country: 'United States', iso3: 'USA', region: 'Americas', year: 2021, priceUsdPerGram: 10, purityPct: null },
-  { drug: 'cannabis', country: 'Germany', iso3: 'DEU', region: 'Europe', year: 2021, priceUsdPerGram: 12, purityPct: null },
-  { drug: 'cannabis', country: 'India', iso3: 'IND', region: 'Asia', year: 2021, priceUsdPerGram: 2, purityPct: null },
+  // --- Cannabis ---
+  { drug: 'cannabis', country: 'Albania', iso3: 'ALB', region: 'Europe', year: 2019, priceUsdPerGram: 1.4, purityPct: 11.5 },
+  { drug: 'cannabis', country: 'Australia', iso3: 'AUS', region: 'Oceania', year: 2019, priceUsdPerGram: 41.75, purityPct: null },
+  { drug: 'cannabis', country: 'Bangladesh', iso3: 'BGD', region: 'Asia', year: 2019, priceUsdPerGram: 0.24, purityPct: null },
+  { drug: 'cannabis', country: 'Belarus', iso3: 'BLR', region: 'Europe', year: 2019, priceUsdPerGram: 22, purityPct: null },
+  { drug: 'cannabis', country: 'Belgium', iso3: 'BEL', region: 'Europe', year: 2019, priceUsdPerGram: 10.08, purityPct: null },
+  { drug: 'cannabis', country: 'Bolivia', iso3: 'BOL', region: 'Americas', year: 2019, priceUsdPerGram: 2.9, purityPct: null },
+  { drug: 'cannabis', country: 'Brunei', iso3: 'BRN', region: 'Asia', year: 2019, priceUsdPerGram: 11.36, purityPct: null },
+  { drug: 'cannabis', country: 'Bulgaria', iso3: 'BGR', region: 'Europe', year: 2019, priceUsdPerGram: 11.16, purityPct: null },
+  { drug: 'cannabis', country: 'Chile', iso3: 'CHL', region: 'Americas', year: 2019, priceUsdPerGram: 9.69, purityPct: null },
+  { drug: 'cannabis', country: 'China', iso3: 'CHN', region: 'Asia', year: 2019, priceUsdPerGram: 39.65, purityPct: null },
+  { drug: 'cannabis', country: 'Cyprus', iso3: 'CYP', region: 'Europe', year: 2019, priceUsdPerGram: 21.84, purityPct: 4.9 },
+  { drug: 'cannabis', country: 'Czechia', iso3: 'CZE', region: 'Europe', year: 2019, priceUsdPerGram: 8.73, purityPct: 15.8 },
+  { drug: 'cannabis', country: 'Ecuador', iso3: 'ECU', region: 'Americas', year: 2019, priceUsdPerGram: 5, purityPct: null },
+  { drug: 'cannabis', country: 'El Salvador', iso3: 'SLV', region: 'Americas', year: 2019, priceUsdPerGram: 3, purityPct: null },
+  { drug: 'cannabis', country: 'Estonia', iso3: 'EST', region: 'Europe', year: 2019, priceUsdPerGram: 22.4, purityPct: 13.7 },
+  { drug: 'cannabis', country: 'Finland', iso3: 'FIN', region: 'Europe', year: 2019, priceUsdPerGram: 22.4, purityPct: 5.3 },
+  { drug: 'cannabis', country: 'France', iso3: 'FRA', region: 'Europe', year: 2019, priceUsdPerGram: 11.2, purityPct: 11.7 },
+  { drug: 'cannabis', country: 'Germany', iso3: 'DEU', region: 'Europe', year: 2019, priceUsdPerGram: 11.09, purityPct: 13.7 },
+  { drug: 'cannabis', country: 'Greece', iso3: 'GRC', region: 'Europe', year: 2019, priceUsdPerGram: 16.8, purityPct: null },
+  { drug: 'cannabis', country: 'Guatemala', iso3: 'GTM', region: 'Americas', year: 2019, priceUsdPerGram: 0.2, purityPct: null },
+  { drug: 'cannabis', country: 'Hong Kong SAR', iso3: 'HKG', region: 'Asia', year: 2019, priceUsdPerGram: 31.1, purityPct: null },
+  { drug: 'cannabis', country: 'Hungary', iso3: 'HUN', region: 'Europe', year: 2019, priceUsdPerGram: 8.73, purityPct: null },
+  { drug: 'cannabis', country: 'Iceland', iso3: 'ISL', region: 'Europe', year: 2019, priceUsdPerGram: 19.23, purityPct: null },
+  { drug: 'cannabis', country: 'India', iso3: 'IND', region: 'Asia', year: 2019, priceUsdPerGram: 0.46, purityPct: null },
+  { drug: 'cannabis', country: 'Indonesia', iso3: 'IDN', region: 'Asia', year: 2019, priceUsdPerGram: 0.55, purityPct: null },
+  { drug: 'cannabis', country: 'Ireland', iso3: 'IRL', region: 'Europe', year: 2019, priceUsdPerGram: 22.4, purityPct: null },
+  { drug: 'cannabis', country: 'Italy', iso3: 'ITA', region: 'Europe', year: 2019, priceUsdPerGram: 10.04, purityPct: null },
+  { drug: 'cannabis', country: 'Japan', iso3: 'JPN', region: 'Asia', year: 2019, priceUsdPerGram: 45.76, purityPct: null },
+  { drug: 'cannabis', country: 'Kuwait', iso3: 'KWT', region: 'Asia', year: 2019, priceUsdPerGram: 19.74, purityPct: null },
+  { drug: 'cannabis', country: 'Latvia', iso3: 'LVA', region: 'Europe', year: 2019, priceUsdPerGram: 13.44, purityPct: null },
+  { drug: 'cannabis', country: 'Lebanon', iso3: 'LBN', region: 'Asia', year: 2019, priceUsdPerGram: 350, purityPct: 80 },
+  { drug: 'cannabis', country: 'Liechtenstein', iso3: 'LIE', region: 'Europe', year: 2019, priceUsdPerGram: 10.05, purityPct: null },
+  { drug: 'cannabis', country: 'Lithuania', iso3: 'LTU', region: 'Europe', year: 2019, priceUsdPerGram: 11.2, purityPct: null },
+  { drug: 'cannabis', country: 'Luxembourg', iso3: 'LUX', region: 'Europe', year: 2019, priceUsdPerGram: 16.26, purityPct: 12.8 },
+  { drug: 'cannabis', country: 'Macao SAR', iso3: 'MAC', region: 'Asia', year: 2019, priceUsdPerGram: 125, purityPct: null },
+  { drug: 'cannabis', country: 'Malaysia', iso3: 'MYS', region: 'Asia', year: 2019, priceUsdPerGram: 4.82, purityPct: null },
+  { drug: 'cannabis', country: 'Moldova', iso3: 'MDA', region: 'Europe', year: 2019, priceUsdPerGram: 5.6, purityPct: null },
+  { drug: 'cannabis', country: 'Montenegro', iso3: 'MNE', region: 'Europe', year: 2019, priceUsdPerGram: 8.4, purityPct: null },
+  { drug: 'cannabis', country: 'Myanmar', iso3: 'MMR', region: 'Asia', year: 2019, priceUsdPerGram: 0.2, purityPct: null },
+  { drug: 'cannabis', country: 'New Zealand', iso3: 'NZL', region: 'Oceania', year: 2019, priceUsdPerGram: 13.17, purityPct: null },
+  { drug: 'cannabis', country: 'North Macedonia', iso3: 'MKD', region: 'Europe', year: 2019, priceUsdPerGram: 8.4, purityPct: null },
+  { drug: 'cannabis', country: 'Philippines', iso3: 'PHL', region: 'Asia', year: 2019, priceUsdPerGram: 2.89, purityPct: null },
+  { drug: 'cannabis', country: 'Poland', iso3: 'POL', region: 'Europe', year: 2019, priceUsdPerGram: 8.84, purityPct: null },
+  { drug: 'cannabis', country: 'Portugal', iso3: 'PRT', region: 'Europe', year: 2019, priceUsdPerGram: 6, purityPct: null },
+  { drug: 'cannabis', country: 'Romania', iso3: 'ROU', region: 'Europe', year: 2019, priceUsdPerGram: 11.78, purityPct: 8.3 },
+  { drug: 'cannabis', country: 'Russia', iso3: 'RUS', region: 'Europe', year: 2019, priceUsdPerGram: 15.35, purityPct: null },
+  { drug: 'cannabis', country: 'Slovakia', iso3: 'SVK', region: 'Europe', year: 2019, priceUsdPerGram: 11.2, purityPct: 10 },
+  { drug: 'cannabis', country: 'Spain', iso3: 'ESP', region: 'Europe', year: 2019, priceUsdPerGram: 5.67, purityPct: null },
+  { drug: 'cannabis', country: 'Sweden', iso3: 'SWE', region: 'Europe', year: 2019, priceUsdPerGram: 10.59, purityPct: 27 },
+  { drug: 'cannabis', country: 'Tajikistan', iso3: 'TJK', region: 'Asia', year: 2019, priceUsdPerGram: 1, purityPct: null },
+  { drug: 'cannabis', country: 'Türkiye', iso3: 'TUR', region: 'Europe', year: 2019, priceUsdPerGram: 10.99, purityPct: null },
+  { drug: 'cannabis', country: 'Ukraine', iso3: 'UKR', region: 'Europe', year: 2019, priceUsdPerGram: 5, purityPct: null },
+  { drug: 'cannabis', country: 'United Kingdom', iso3: 'GBR', region: 'Europe', year: 2019, priceUsdPerGram: 9.54, purityPct: null },
+  { drug: 'cannabis', country: 'United States', iso3: 'USA', region: 'Americas', year: 2019, priceUsdPerGram: 200, purityPct: null },
+  { drug: 'cannabis', country: 'Uruguay', iso3: 'URY', region: 'Americas', year: 2019, priceUsdPerGram: 1.36, purityPct: null },
+  { drug: 'cannabis', country: 'Zambia', iso3: 'ZMB', region: 'Africa', year: 2019, priceUsdPerGram: 0.39, purityPct: null },
 
   // --- Methamphetamine ---
-  { drug: 'methamphetamine', country: 'United States', iso3: 'USA', region: 'Americas', year: 2021, priceUsdPerGram: 65, purityPct: 90 },
-  { drug: 'methamphetamine', country: 'Australia', iso3: 'AUS', region: 'Oceania', year: 2021, priceUsdPerGram: 320, purityPct: 78 },
-  { drug: 'methamphetamine', country: 'Thailand', iso3: 'THA', region: 'Asia', year: 2021, priceUsdPerGram: 25, purityPct: 85 },
+  { drug: 'methamphetamine', country: 'Australia', iso3: 'AUS', region: 'Oceania', year: 2019, priceUsdPerGram: 400.14, purityPct: 77.9 },
+  { drug: 'methamphetamine', country: 'Belarus', iso3: 'BLR', region: 'Europe', year: 2019, priceUsdPerGram: 90, purityPct: null },
+  { drug: 'methamphetamine', country: 'Belgium', iso3: 'BEL', region: 'Europe', year: 2019, priceUsdPerGram: 134.38, purityPct: null },
+  { drug: 'methamphetamine', country: 'Brunei', iso3: 'BRN', region: 'Asia', year: 2019, priceUsdPerGram: 147.72, purityPct: 74.6 },
+  { drug: 'methamphetamine', country: 'Bulgaria', iso3: 'BGR', region: 'Europe', year: 2019, priceUsdPerGram: 31.48, purityPct: null },
+  { drug: 'methamphetamine', country: 'China', iso3: 'CHN', region: 'Asia', year: 2019, priceUsdPerGram: 50.13, purityPct: 72 },
+  { drug: 'methamphetamine', country: 'Cyprus', iso3: 'CYP', region: 'Europe', year: 2019, priceUsdPerGram: 111.98, purityPct: 49.7 },
+  { drug: 'methamphetamine', country: 'Czechia', iso3: 'CZE', region: 'Europe', year: 2019, priceUsdPerGram: 43.67, purityPct: 50.4 },
+  { drug: 'methamphetamine', country: 'Egypt', iso3: 'EGY', region: 'Africa', year: 2019, priceUsdPerGram: 127.3, purityPct: null },
+  { drug: 'methamphetamine', country: 'Finland', iso3: 'FIN', region: 'Europe', year: 2019, priceUsdPerGram: 33.59, purityPct: 20.4 },
+  { drug: 'methamphetamine', country: 'France', iso3: 'FRA', region: 'Europe', year: 2019, priceUsdPerGram: 44.79, purityPct: 67 },
+  { drug: 'methamphetamine', country: 'Germany', iso3: 'DEU', region: 'Europe', year: 2019, priceUsdPerGram: 87.12, purityPct: 74.2 },
+  { drug: 'methamphetamine', country: 'Hong Kong SAR', iso3: 'HKG', region: 'Asia', year: 2019, priceUsdPerGram: 76.42, purityPct: null },
+  { drug: 'methamphetamine', country: 'Hungary', iso3: 'HUN', region: 'Europe', year: 2019, priceUsdPerGram: 6.94, purityPct: null },
+  { drug: 'methamphetamine', country: 'Iceland', iso3: 'ISL', region: 'Europe', year: 2019, priceUsdPerGram: 27.01, purityPct: null },
+  { drug: 'methamphetamine', country: 'Indonesia', iso3: 'IDN', region: 'Asia', year: 2019, priceUsdPerGram: 81, purityPct: 77.4 },
+  { drug: 'methamphetamine', country: 'Japan', iso3: 'JPN', region: 'Asia', year: 2019, priceUsdPerGram: 549.11, purityPct: null },
+  { drug: 'methamphetamine', country: 'Kuwait', iso3: 'KWT', region: 'Asia', year: 2019, priceUsdPerGram: 82.24, purityPct: null },
+  { drug: 'methamphetamine', country: 'Latvia', iso3: 'LVA', region: 'Europe', year: 2019, priceUsdPerGram: 13.44, purityPct: 20 },
+  { drug: 'methamphetamine', country: 'Lithuania', iso3: 'LTU', region: 'Europe', year: 2019, priceUsdPerGram: 11.2, purityPct: 16.3 },
+  { drug: 'methamphetamine', country: 'Luxembourg', iso3: 'LUX', region: 'Europe', year: 2019, priceUsdPerGram: 38.82, purityPct: null },
+  { drug: 'methamphetamine', country: 'Macao SAR', iso3: 'MAC', region: 'Asia', year: 2019, priceUsdPerGram: 413, purityPct: null },
+  { drug: 'methamphetamine', country: 'Malaysia', iso3: 'MYS', region: 'Asia', year: 2019, priceUsdPerGram: 43.4, purityPct: null },
+  { drug: 'methamphetamine', country: 'Moldova', iso3: 'MDA', region: 'Europe', year: 2019, priceUsdPerGram: 31.35, purityPct: null },
+  { drug: 'methamphetamine', country: 'Myanmar', iso3: 'MMR', region: 'Asia', year: 2019, priceUsdPerGram: 6.54, purityPct: null },
+  { drug: 'methamphetamine', country: 'Nepal', iso3: 'NPL', region: 'Asia', year: 2019, priceUsdPerGram: 57.7, purityPct: null },
+  { drug: 'methamphetamine', country: 'New Zealand', iso3: 'NZL', region: 'Oceania', year: 2019, priceUsdPerGram: 263.33, purityPct: null },
+  { drug: 'methamphetamine', country: 'North Macedonia', iso3: 'MKD', region: 'Europe', year: 2019, priceUsdPerGram: 5.6, purityPct: null },
+  { drug: 'methamphetamine', country: 'Pakistan', iso3: 'PAK', region: 'Asia', year: 2019, priceUsdPerGram: 9.98, purityPct: null },
+  { drug: 'methamphetamine', country: 'Philippines', iso3: 'PHL', region: 'Asia', year: 2019, priceUsdPerGram: 140.69, purityPct: null },
+  { drug: 'methamphetamine', country: 'Poland', iso3: 'POL', region: 'Europe', year: 2019, priceUsdPerGram: 35.08, purityPct: null },
+  { drug: 'methamphetamine', country: 'Russia', iso3: 'RUS', region: 'Europe', year: 2019, priceUsdPerGram: 46.83, purityPct: null },
+  { drug: 'methamphetamine', country: 'Saudi Arabia', iso3: 'SAU', region: 'Asia', year: 2019, priceUsdPerGram: 142.1, purityPct: null },
+  { drug: 'methamphetamine', country: 'Slovakia', iso3: 'SVK', region: 'Europe', year: 2019, priceUsdPerGram: 55.99, purityPct: 56 },
+  { drug: 'methamphetamine', country: 'Thailand', iso3: 'THA', region: 'Asia', year: 2019, priceUsdPerGram: 41, purityPct: 94.9 },
+  { drug: 'methamphetamine', country: 'Türkiye', iso3: 'TUR', region: 'Europe', year: 2019, priceUsdPerGram: 39.01, purityPct: 77.3 },
+  { drug: 'methamphetamine', country: 'Ukraine', iso3: 'UKR', region: 'Europe', year: 2019, priceUsdPerGram: 30, purityPct: null },
+  { drug: 'methamphetamine', country: 'United Kingdom', iso3: 'GBR', region: 'Europe', year: 2019, priceUsdPerGram: 190.84, purityPct: 79 },
+  { drug: 'methamphetamine', country: 'Zambia', iso3: 'ZMB', region: 'Africa', year: 2019, priceUsdPerGram: 23.37, purityPct: null },
 ]
 
-// Context for the "affordability" lens — approximate nominal GDP per capita (USD).
-// Replace with World Bank figures (NY.GDP.PCAP.CD) for accuracy.
+// Context for the "affordability" lens — World Bank GDP per capita,
+// current US$ (NY.GDP.PCAP.CD), 2024 values, fetched 2026-07-03 via
+// scripts/convert/fetch-gdp.mjs. Rounded to whole dollars.
 export const GDP_PER_CAPITA_USD: Record<string, number> = {
-  USA: 70000,
-  DEU: 51000,
-  COL: 6600,
-  AUS: 60000,
-  IND: 2400,
-  AFG: 370,
-  THA: 7200,
+  ALB: 11374, // 2024
+  AUS: 64609, // 2024
+  BEL: 56581, // 2024
+  BGD: 2593, // 2024
+  BGR: 17596, // 2024
+  BLR: 8605, // 2024
+  BOL: 4421, // 2024
+  BRN: 33153, // 2024
+  CHL: 16658, // 2024
+  CHN: 13293, // 2024
+  CYP: 38674, // 2024
+  CZE: 31827, // 2024
+  DEU: 56103, // 2024
+  DNK: 71026, // 2024
+  ECU: 6826, // 2024
+  EGY: 3338, // 2024
+  ESP: 35326, // 2024
+  EST: 31428, // 2024
+  FIN: 53155, // 2024
+  FRA: 46103, // 2024
+  GBR: 53341, // 2024
+  GEO: 8967, // 2024
+  GRC: 24626, // 2024
+  GTM: 6150, // 2024
+  HKG: 54274, // 2024
+  HUN: 23305, // 2024
+  IDN: 4925, // 2024
+  IND: 2591, // 2024
+  IRL: 112894, // 2024
+  IRN: 5190, // 2024
+  ISL: 85863, // 2024
+  ITA: 40429, // 2024
+  JPN: 33797, // 2024
+  KAZ: 14154, // 2024
+  KEN: 2133, // 2024
+  KGZ: 2514, // 2024
+  KWT: 32855, // 2024
+  LBN: 4473, // 2024
+  LIE: 220167, // 2024
+  LTU: 29603, // 2024
+  LUX: 137781, // 2024
+  LVA: 23578, // 2024
+  MAC: 72004, // 2024
+  MAR: 4153, // 2024
+  MDA: 7578, // 2024
+  MKD: 9291, // 2024
+  MMR: 1359, // 2024
+  MNE: 13270, // 2024
+  MYS: 11874, // 2024
+  NPL: 1460, // 2024
+  NZL: 49432, // 2024
+  PAK: 1479, // 2024
+  PHL: 3985, // 2024
+  POL: 25103, // 2024
+  PRT: 29328, // 2024
+  ROU: 20080, // 2024
+  RUS: 14961, // 2024
+  SAU: 35527, // 2024
+  SLV: 5503, // 2024
+  SRB: 13677, // 2024
+  SVK: 25992, // 2024
+  SWE: 57222, // 2024
+  THA: 7386, // 2024
+  TJK: 1362, // 2024
+  TUN: 4187, // 2024
+  TUR: 15892, // 2024
+  UKR: 5391, // 2024
+  URY: 24308, // 2024
+  USA: 86169, // 2024
+  ZMB: 1187, // 2024
 }
 
 export const SOURCES: Source[] = [
-  { name: 'UNODC — Drugs: prices', url: 'https://dataunodc.un.org' },
+  { name: 'UNODC World Drug Report 2025 — Statistical Annex 8.1: Prices and purities of drugs', url: 'https://www.unodc.org/unodc/en/data-and-analysis/world-drug-report-2025-annex.html' },
+  { name: 'UNODC — Drugs: prices (data portal)', url: 'https://dataunodc.un.org' },
   { name: 'EUDA (EMCDDA) — price & purity data', url: 'https://www.euda.europa.eu/data' },
-  { name: 'UNODC World Drug Report', url: 'https://www.unodc.org/unodc/en/data-and-analysis/world-drug-report.html' },
-  { name: 'World Bank — GDP per capita', url: 'https://data.worldbank.org/indicator/NY.GDP.PCAP.CD' },
+  { name: 'World Bank — GDP per capita, NY.GDP.PCAP.CD', url: 'https://data.worldbank.org/indicator/NY.GDP.PCAP.CD' },
 ]

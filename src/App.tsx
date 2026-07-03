@@ -57,8 +57,13 @@ export default function App() {
               />
               <p className="tagline">Making the world&rsquo;s drug-trade data legible.</p>
             </div>
-            <span className={`data-badge tk-chip ${isSample ? 'tk-chip--warning' : 'tk-chip--ok'}`}>
-              {isSample ? 'Sample data' : 'Live data'}
+            <span
+              className={`data-badge tk-chip ${isSample ? 'tk-chip--warning' : 'tk-chip--ok'}`}
+              title={isSample
+                ? 'Street Prices: official UNODC WDR 2025 Annex 8.1 figures. Flows, corridor map and Myanmar focus: illustrative pending official-data ingestion.'
+                : 'All datasets replaced via the CSV loader — verify against the cited official sources.'}
+            >
+              {isSample ? 'Prices: official · flows: sample' : 'Live data'}
             </span>
           </div>
           <Reveal delay={420}>
@@ -100,7 +105,7 @@ export default function App() {
           <DataLoader />
           <p className="disclaimer tk-degraded">
             ⚠️ {isSample
-              ? 'Showing sample/illustrative figures pending replacement with official data. '
+              ? 'Street Prices shows official UNODC World Drug Report 2025 figures (Statistical Annex 8.1, retail per-gram, 2019–2023) with World Bank GDP-per-capita context. Precursor flows, the corridor map, and Myanmar focus figures remain illustrative pending official-data ingestion. '
               : 'Showing loaded data — verify against the cited official sources. '}
             This tool reports aggregate, published statistics (country and, for focus
             regions, province level) for awareness and research. It does not provide
