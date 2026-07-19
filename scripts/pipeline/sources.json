@@ -141,7 +141,7 @@
       "cadence": "biennial",
       "license": "GI-TOC, attribution",
       "automation": "manual",
-      "feeds": "NOT YET INTEGRATED — candidate context layer (criminality/resilience scores beside seizure data); also a relationship signal for the GI-TOC grant track",
+      "feeds": "NOT YET INTEGRATED — candidate context layer (criminality/resilience scores beside seizure data)",
       "transform": "TODO"
     }
   ]
